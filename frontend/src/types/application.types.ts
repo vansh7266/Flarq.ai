@@ -1,21 +1,57 @@
 export type ApplicationStatus =
   | 'saved'
   | 'applied'
-  | 'interviewing'
+  | 'phone_screen'
+  | 'interview'
   | 'offer'
+  | 'accepted'
   | 'rejected'
-  | 'withdrawn'
+  | 'ghosted'
+
+export type ApplicationPriority = 'high' | 'medium' | 'low'
+
+export interface ApplicationNote {
+  text: string
+  createdAt?: string | null
+}
 
 export interface JobApplication {
   id: string
   userId: string
-  company: string
-  roleTitle: string
+  companyName: string
+  jobTitle: string
   status: ApplicationStatus
-  jobDescriptionId?: string
-  notes?: string
-  appliedAt?: string
-  nextFollowUpAt?: string
-  createdAt: string
-  updatedAt: string
+  jdId?: string | null
+  coverLetterId?: string | null
+  appliedDate?: string | null
+  lastUpdated?: string | null
+  notes: ApplicationNote[]
+  source?: string | null
+  salaryExpectation?: string | null
+  contactName?: string | null
+  contactEmail?: string | null
+  interviewDates: string[]
+  rejectionReason?: string | null
+  offerAmount?: string | null
+  priority: ApplicationPriority
+  tags: string[]
+  matchScore?: number | null
+  statusHistory: { status?: string; at?: string }[]
+  createdAt?: string | null
+  updatedAt?: string | null
+}
+
+export interface ApplicationsResponse {
+  grouped: Record<string, JobApplication[]>
+  flat: JobApplication[]
+  columnsOrder: string[]
+}
+
+export interface StaleApplicationItem {
+  applicationId: string
+  companyName: string
+  jobTitle: string
+  status: ApplicationStatus
+  daysSinceUpdate: number
+  suggestedAction: string
 }

@@ -28,6 +28,17 @@ async def ensure_indexes(database: AsyncIOMotorDatabase) -> None:
         [("user_id", 1), ("status", 1), ("created_at", -1)],
         name="user_status_created",
     )
+    await applications.create_index([("user_id", 1), ("deleted", 1), ("last_updated", -1)])
+
+    await database["analytics_cache"].create_index(
+        [("user_id", 1), ("cache_key", 1)],
+        unique=True,
+        name="user_cache_key",
+    )
+    await database["agent_conversations"].create_index(
+        [("user_id", 1), ("updated_at", -1)],
+        name="user_agent_conv_updated",
+    )
 
     job_descriptions = database["job_descriptions"]
     await job_descriptions.create_index([("requirements", "text")])
