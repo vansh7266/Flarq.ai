@@ -1,98 +1,95 @@
 """
-MongoDB data plane for FLARQ.
-
-Uses the same Atlas connection string (MONGODB_URI) as the official MongoDB MCP server
-(`@mongodb-labs/mcp-server-mongodb`). Operations mirror MCP tool semantics while running
-inside the FastAPI process for low-latency, production-friendly deployments.
+Flarq MCP Client
+Communicates with the Flarq MongoDB MCP Server via subprocess.
+All agent data operations flow through MCP protocol.
 """
 
 from __future__ import annotations
 
+import json
+import os
+import sys
 import time
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any, Mapping
 
 import structlog
-from bson import ObjectId
-from motor.motor_asyncio import AsyncIOMotorCollection, AsyncIOMotorDatabase
-from pymongo.errors import PyMongoError
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
 
-logger = structlog.get_logger("mongo_mcp")
+logger = structlog.get_logger()
 
-
-def _normalize_document(value: Any) -> Any:
-    if isinstance(value, ObjectId):
-        return str(value)
-    if isinstance(value, datetime):
-        return value.isoformat()
-    if isinstance(value, dict):
-        return {k: _normalize_document(v) for k, v in value.items()}
-    if isinstance(value, list):
-        return [_normalize_document(v) for v in value]
-    return value
+_BACKEND_ROOT = Path(__file__).resolve().parents[3]
+_MCP_SERVER_SCRIPT = _BACKEND_ROOT / "mcp_server" / "flarq_mongo_mcp.py"
 
 
-class MongoMCPClient:
-    """Async MongoDB client with MCP-style operations, structured logging, and safe errors."""
+class FlarqMCPClient:
+    """
+    Real MCP client for Flarq MongoDB operations.
+    Spawns the MCP server as subprocess and communicates
+    via stdio transport — proper Model Context Protocol.
+    """
 
-    def __init__(self, database: AsyncIOMotorDatabase) -> None:
-        self._db = database
+    def __init__(self) -> None:
+        self.server_params = StdioServerParameters(
+            command=sys.executable,
+            args=[str(_MCP_SERVER_SCRIPT)],
+            env={
+                "MONGODB_URI": os.environ["MONGODB_URI"],
+                "MONGODB_DB_NAME": os.environ.get("MONGODB_DB_NAME", "flarq"),
+            },
+            cwd=str(_BACKEND_ROOT),
+        )
 
-    def _collection(self, name: str) -> AsyncIOMotorCollection:
-        return self._db[name]
+    async def _call(self, tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
+        """Make a real MCP tool call via stdio transport."""
+        start = time.monotonic()
 
-    async def insert_one(self, collection: str, document: dict[str, Any]) -> str:
-        start = time.perf_counter()
         try:
-            result = await self._collection(collection).insert_one(document)
-            duration_ms = round((time.perf_counter() - start) * 1000, 2)
-            logger.info(
-                "mcp_insert_one",
-                collection=collection,
-                operation="insert_one",
-                duration_ms=duration_ms,
-            )
-            return str(result.inserted_id)
-        except PyMongoError as exc:
-            duration_ms = round((time.perf_counter() - start) * 1000, 2)
-            logger.exception(
-                "mcp_insert_one_failed",
-                collection=collection,
-                operation="insert_one",
-                duration_ms=duration_ms,
-                error=str(exc),
-            )
-            raise RuntimeError("Database operation failed.") from exc
+            async with stdio_client(self.server_params) as (read, write):
+                async with ClientSession(read, write) as session:
+                    await session.initialize()
+                    result = await session.call_tool(tool_name, arguments)
+
+                    duration_ms = (time.monotonic() - start) * 1000
+                    logger.info(
+                        "mcp_tool_call",
+                        tool=tool_name,
+                        collection=arguments.get("collection"),
+                        duration_ms=round(duration_ms, 2),
+                    )
+
+                    if result.isError:
+                        text = ""
+                        if result.content:
+                            block = result.content[0]
+                            if hasattr(block, "text"):
+                                text = block.text
+                        raise RuntimeError(text or "MCP tool call failed")
+
+                    if not result.content:
+                        return {"success": False, "error": "No content returned"}
+
+                    payload = json.loads(result.content[0].text)
+                    if payload.get("success") is False:
+                        raise RuntimeError(str(payload.get("error", "Unknown MCP error")))
+                    return payload
+
+        except Exception as e:
+            logger.error("mcp_tool_call_failed", tool=tool_name, error=str(e))
+            raise
 
     async def find_one(
         self,
         collection: str,
         filter_query: Mapping[str, Any],
     ) -> dict[str, Any] | None:
-        start = time.perf_counter()
-        try:
-            prepared = self._prepare_filter(filter_query)
-            doc = await self._collection(collection).find_one(prepared)
-            duration_ms = round((time.perf_counter() - start) * 1000, 2)
-            logger.info(
-                "mcp_find_one",
-                collection=collection,
-                operation="find_one",
-                duration_ms=duration_ms,
-            )
-            if doc is None:
-                return None
-            return _normalize_document(doc)
-        except PyMongoError as exc:
-            duration_ms = round((time.perf_counter() - start) * 1000, 2)
-            logger.exception(
-                "mcp_find_one_failed",
-                collection=collection,
-                operation="find_one",
-                duration_ms=duration_ms,
-                error=str(exc),
-            )
-            raise RuntimeError("Database operation failed.") from exc
+        res = await self._call(
+            "mongodb_find_one",
+            {"collection": collection, "filter": dict(filter_query)},
+        )
+        return res.get("data")
 
     async def find_many(
         self,
@@ -102,33 +99,25 @@ class MongoMCPClient:
         sort: list[tuple[str, int]] | None = None,
         limit: int = 100,
     ) -> list[dict[str, Any]]:
-        start = time.perf_counter()
-        try:
-            prepared = self._prepare_filter(filter_query)
-            cursor = self._collection(collection).find(prepared)
-            if sort:
-                cursor = cursor.sort(sort)
-            cursor = cursor.limit(limit)
-            docs = await cursor.to_list(length=limit)
-            duration_ms = round((time.perf_counter() - start) * 1000, 2)
-            logger.info(
-                "mcp_find_many",
-                collection=collection,
-                operation="find_many",
-                duration_ms=duration_ms,
-                limit=limit,
-            )
-            return [_normalize_document(doc) for doc in docs]
-        except PyMongoError as exc:
-            duration_ms = round((time.perf_counter() - start) * 1000, 2)
-            logger.exception(
-                "mcp_find_many_failed",
-                collection=collection,
-                operation="find_many",
-                duration_ms=duration_ms,
-                error=str(exc),
-            )
-            raise RuntimeError("Database operation failed.") from exc
+        args: dict[str, Any] = {
+            "collection": collection,
+            "filter": dict(filter_query),
+            "limit": limit,
+        }
+        if sort:
+            args["sort"] = [list(pair) for pair in sort]
+        res = await self._call("mongodb_find_many", args)
+        return res.get("data") or []
+
+    async def insert_one(self, collection: str, document: dict[str, Any]) -> str:
+        res = await self._call(
+            "mongodb_insert_one",
+            {"collection": collection, "document": dict(document)},
+        )
+        inserted = (res.get("data") or {}).get("inserted_id")
+        if not inserted:
+            raise RuntimeError("Database operation failed.")
+        return str(inserted)
 
     async def update_one(
         self,
@@ -138,84 +127,49 @@ class MongoMCPClient:
         *,
         upsert: bool = False,
     ) -> int:
-        start = time.perf_counter()
-        try:
-            prepared = self._prepare_filter(filter_query)
-            result = await self._collection(collection).update_one(
-                prepared, update, upsert=upsert
-            )
-            duration_ms = round((time.perf_counter() - start) * 1000, 2)
-            logger.info(
-                "mcp_update_one",
-                collection=collection,
-                operation="update_one",
-                duration_ms=duration_ms,
-                modified_count=result.modified_count,
-            )
-            return int(result.modified_count)
-        except PyMongoError as exc:
-            duration_ms = round((time.perf_counter() - start) * 1000, 2)
-            logger.exception(
-                "mcp_update_one_failed",
-                collection=collection,
-                operation="update_one",
-                duration_ms=duration_ms,
-                error=str(exc),
-            )
-            raise RuntimeError("Database operation failed.") from exc
+        res = await self._call(
+            "mongodb_update_one",
+            {
+                "collection": collection,
+                "filter": dict(filter_query),
+                "update": dict(update),
+                "upsert": upsert,
+            },
+        )
+        data = res.get("data") or {}
+        return int(data.get("modified_count", 0))
 
     async def delete_one(self, collection: str, filter_query: Mapping[str, Any]) -> int:
-        start = time.perf_counter()
-        try:
-            prepared = self._prepare_filter(filter_query)
-            result = await self._collection(collection).delete_one(prepared)
-            duration_ms = round((time.perf_counter() - start) * 1000, 2)
-            logger.info(
-                "mcp_delete_one",
-                collection=collection,
-                operation="delete_one",
-                duration_ms=duration_ms,
-            )
-            return int(result.deleted_count)
-        except PyMongoError as exc:
-            duration_ms = round((time.perf_counter() - start) * 1000, 2)
-            logger.exception(
-                "mcp_delete_one_failed",
-                collection=collection,
-                operation="delete_one",
-                duration_ms=duration_ms,
-                error=str(exc),
-            )
-            raise RuntimeError("Database operation failed.") from exc
+        res = await self._call(
+            "mongodb_delete_one",
+            {"collection": collection, "filter": dict(filter_query)},
+        )
+        return int((res.get("data") or {}).get("modified_count", 0))
 
     async def aggregate(
         self,
         collection: str,
         pipeline: list[Mapping[str, Any]],
     ) -> list[dict[str, Any]]:
-        start = time.perf_counter()
-        try:
-            cursor = self._collection(collection).aggregate(list(pipeline))
-            results = await cursor.to_list(length=None)
-            duration_ms = round((time.perf_counter() - start) * 1000, 2)
-            logger.info(
-                "mcp_aggregate",
-                collection=collection,
-                operation="aggregate",
-                duration_ms=duration_ms,
-                stages=len(pipeline),
-            )
-            return [_normalize_document(doc) for doc in results]
-        except PyMongoError as exc:
-            duration_ms = round((time.perf_counter() - start) * 1000, 2)
-            logger.exception(
-                "mcp_aggregate_failed",
-                collection=collection,
-                operation="aggregate",
-                duration_ms=duration_ms,
-                error=str(exc),
-            )
-            raise RuntimeError("Database operation failed.") from exc
+        res = await self._call(
+            "mongodb_aggregate",
+            {"collection": collection, "pipeline": [dict(s) for s in pipeline]},
+        )
+        return res.get("data") or []
+
+    async def inspect_schema(self, collection: str) -> dict[str, Any]:
+        res = await self._call(
+            "mongodb_inspect_schema",
+            {"collection": collection},
+        )
+        return res.get("data") or {}
+
+    async def count(self, collection: str, filter_query: Mapping[str, Any]) -> int:
+        res = await self._call(
+            "mongodb_count",
+            {"collection": collection, "filter": dict(filter_query)},
+        )
+        return int((res.get("data") or {}).get("count", 0))
 
     async def vector_search(
         self,
@@ -224,80 +178,19 @@ class MongoMCPClient:
         index_name: str,
         limit: int,
     ) -> list[dict[str, Any]]:
-        pipeline: list[dict[str, Any]] = [
+        res = await self._call(
+            "mongodb_vector_search",
             {
-                "$vectorSearch": {
-                    "index": index_name,
-                    "path": "embedding",
-                    "queryVector": query_vector,
-                    "numCandidates": max(limit * 10, limit),
-                    "limit": limit,
-                }
-            }
-        ]
-        start = time.perf_counter()
-        try:
-            cursor = self._collection(collection).aggregate(pipeline)
-            docs = await cursor.to_list(length=None)
-            duration_ms = round((time.perf_counter() - start) * 1000, 2)
-            logger.info(
-                "mcp_vector_search",
-                collection=collection,
-                operation="vector_search",
-                duration_ms=duration_ms,
-                index=index_name,
-            )
-            return [_normalize_document(doc) for doc in docs]
-        except Exception as exc:  # noqa: BLE001
-            duration_ms = round((time.perf_counter() - start) * 1000, 2)
-            logger.warning(
-                "mcp_vector_search_unavailable",
-                collection=collection,
-                duration_ms=duration_ms,
-                error=str(exc),
-            )
-            return []
-
-    async def inspect_schema(self, collection: str) -> dict[str, Any]:
-        start = time.perf_counter()
-        try:
-            sample = await self.find_many(collection, {}, limit=5)
-            keys: set[str] = set()
-            for doc in sample:
-                keys.update(doc.keys())
-            indexes = await self._collection(collection).index_information()
-            duration_ms = round((time.perf_counter() - start) * 1000, 2)
-            logger.info(
-                "mcp_inspect_schema",
-                collection=collection,
-                operation="inspect_schema",
-                duration_ms=duration_ms,
-            )
-            return {
                 "collection": collection,
-                "sample_size": len(sample),
-                "observed_fields": sorted(keys),
-                "indexes": indexes,
-            }
-        except PyMongoError as exc:
-            duration_ms = round((time.perf_counter() - start) * 1000, 2)
-            logger.exception(
-                "mcp_inspect_schema_failed",
-                collection=collection,
-                operation="inspect_schema",
-                duration_ms=duration_ms,
-                error=str(exc),
-            )
-            raise RuntimeError("Database operation failed.") from exc
+                "query_vector": query_vector,
+                "index_name": index_name,
+                "limit": limit,
+            },
+        )
+        return res.get("data") or []
 
-    def _prepare_filter(self, filter_query: Mapping[str, Any]) -> dict[str, Any]:
-        prepared = dict(filter_query)
-        if "_id" in prepared and isinstance(prepared["_id"], str):
-            try:
-                prepared["_id"] = ObjectId(str(prepared["_id"]))
-            except Exception:  # noqa: BLE001
-                pass
-        return prepared
+
+mcp_client = FlarqMCPClient()
 
 
 def utcnow() -> datetime:

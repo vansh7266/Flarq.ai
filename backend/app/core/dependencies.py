@@ -60,11 +60,11 @@ async def get_current_user(
 CurrentUser = Annotated[dict[str, Any], Depends(get_current_user)]
 Database = Annotated[AsyncIOMotorDatabase, Depends(get_db)]
 
-from app.services.mongodb.mcp_client import MongoMCPClient
+from app.services.mongodb.mcp_client import FlarqMCPClient, mcp_client
 
 
-def get_mcp_client(db: Database) -> MongoMCPClient:
-    return MongoMCPClient(db)
+def get_mcp_client() -> FlarqMCPClient:
+    return mcp_client
 
 
-MCPClient = Annotated[MongoMCPClient, Depends(get_mcp_client)]
+MCPClient = Annotated[FlarqMCPClient, Depends(get_mcp_client)]

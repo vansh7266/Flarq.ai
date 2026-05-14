@@ -1,4 +1,4 @@
-"""Stale application checks and follow-up generation (MongoMCPClient + Gemini)."""
+"""Stale application checks and follow-up generation (FlarqMCPClient + Gemini)."""
 
 from __future__ import annotations
 
@@ -6,10 +6,10 @@ from typing import Any
 
 from app.services.applications.application_service import ApplicationService
 from app.services.gemini.follow_up_email import generate_follow_up_email as gemini_follow_up
-from app.services.mongodb.mcp_client import MongoMCPClient
+from app.services.mongodb.mcp_client import FlarqMCPClient
 
 
-async def check_stale_applications(mcp: MongoMCPClient, user_id: str) -> list[dict[str, Any]]:
+async def check_stale_applications(mcp: FlarqMCPClient, user_id: str) -> list[dict[str, Any]]:
     svc = ApplicationService(mcp)
     items = await svc.list_stale(user_id, days=7)
     for item in items:
@@ -21,7 +21,7 @@ async def check_stale_applications(mcp: MongoMCPClient, user_id: str) -> list[di
 
 
 async def generate_follow_up_email(
-    mcp: MongoMCPClient,
+    mcp: FlarqMCPClient,
     *,
     application_id: str,
     user_id: str,

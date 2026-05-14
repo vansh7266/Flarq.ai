@@ -1,4 +1,4 @@
-"""Application CRUD and Kanban helpers — all persistence via MongoMCPClient."""
+"""Application CRUD and Kanban helpers — all persistence via FlarqMCPClient (stdio MCP)."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from typing import Any, Literal
 from bson import ObjectId
 from bson.errors import InvalidId
 
-from app.services.mongodb.mcp_client import MongoMCPClient, utcnow
+from app.services.mongodb.mcp_client import FlarqMCPClient, utcnow
 
 APPLICATION_STATUSES: list[str] = [
     "saved",
@@ -125,7 +125,7 @@ def _parse_object_id(app_id: str) -> ObjectId:
 
 
 class ApplicationService:
-    def __init__(self, mcp: MongoMCPClient) -> None:
+    def __init__(self, mcp: FlarqMCPClient) -> None:
         self._mcp = mcp
 
     async def list_grouped(

@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.services.mongodb.mcp_client import MongoMCPClient
+from app.services.mongodb.mcp_client import FlarqMCPClient
 
 from .response_rate import _week_key_expr
 
 
-async def get_timeline(mcp: MongoMCPClient, user_id: str) -> dict[str, Any]:
+async def get_timeline(mcp: FlarqMCPClient, user_id: str) -> dict[str, Any]:
     base = {"user_id": user_id, "deleted": {"$ne": True}}
     weekly = await mcp.aggregate(
         "applications",

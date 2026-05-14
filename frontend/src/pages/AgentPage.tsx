@@ -78,7 +78,7 @@ export function AgentPage() {
           ...previous,
           createMessage(
             'assistant',
-            'Something went wrong reaching the agent. Check GEMINI_API_KEY and try again.'
+            'Something went wrong reaching the agent. Check GOOGLE_CLOUD_PROJECT and Vertex AI auth (see backend/setup_gcp_auth.md).'
           ),
         ])
       }

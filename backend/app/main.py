@@ -6,11 +6,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
+import structlog
 
 from app.api.router import api_router
 from app.core.config import get_settings
 from app.core.limiter import limiter
 from app.core.middleware import RequestLoggingMiddleware, configure_structlog
+from app.services.gemini.vertex_client import init_vertex
 from app.services.mongodb.client import MongoClientManager, ensure_indexes
 
 mongo_manager = MongoClientManager()
@@ -19,6 +21,13 @@ mongo_manager = MongoClientManager()
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     configure_structlog()
+    settings = get_settings()
+    init_vertex()
+    structlog.get_logger("flarq.startup").info(
+        "vertex_ai_ready",
+        project=settings.google_cloud_project,
+        location=settings.google_cloud_location,
+    )
     database = await mongo_manager.connect()
     await ensure_indexes(database)
     _app.state.db = database

@@ -10,10 +10,10 @@ from app.services.mongodb.aggregations.company_patterns import get_company_patte
 from app.services.mongodb.aggregations.response_rate import avg_days_to_response, get_response_rate
 from app.services.mongodb.aggregations.skill_demand import get_skill_demand
 from app.services.mongodb.aggregations.timeline_analytics import get_timeline
-from app.services.mongodb.mcp_client import MongoMCPClient, utcnow
+from app.services.mongodb.mcp_client import FlarqMCPClient, utcnow
 
 
-async def get_cached_overview(mcp: MongoMCPClient, user_id: str) -> dict[str, Any]:
+async def get_cached_overview(mcp: FlarqMCPClient, user_id: str) -> dict[str, Any]:
     now = utcnow()
     cached = await mcp.find_one(
         "analytics_cache",

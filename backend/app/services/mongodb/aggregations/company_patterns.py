@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.services.mongodb.mcp_client import MongoMCPClient
+from app.services.mongodb.mcp_client import FlarqMCPClient
 
 _JD_LOOKUP_STAGE = {
     "$lookup": {
@@ -40,7 +40,7 @@ _JD_LOOKUP_STAGE = {
 }
 
 
-async def get_company_patterns(mcp: MongoMCPClient, user_id: str) -> dict[str, Any]:
+async def get_company_patterns(mcp: FlarqMCPClient, user_id: str) -> dict[str, Any]:
     pipeline: list[dict[str, Any]] = [
         {"$match": {"user_id": user_id, "deleted": {"$ne": True}}},
         _JD_LOOKUP_STAGE,
@@ -105,8 +105,7 @@ async def get_company_patterns(mcp: MongoMCPClient, user_id: str) -> dict[str, A
 
 
 async def summarize_company_patterns(database: Any, user_id: str) -> list[dict[str, Any]]:
-    from app.services.mongodb.mcp_client import MongoMCPClient
+    from app.services.mongodb.mcp_client import mcp_client
 
-    mcp = MongoMCPClient(database)
-    data = await get_company_patterns(mcp, user_id)
+    data = await get_company_patterns(mcp_client, user_id)
     return list(data.get("segments") or [])

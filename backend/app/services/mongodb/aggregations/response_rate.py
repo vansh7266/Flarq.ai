@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.services.mongodb.mcp_client import MongoMCPClient
+from app.services.mongodb.mcp_client import FlarqMCPClient
 
 
 def _week_key_expr(date_field: str = "$created_at") -> dict[str, Any]:
@@ -18,7 +18,7 @@ def _week_key_expr(date_field: str = "$created_at") -> dict[str, Any]:
     }
 
 
-async def get_response_rate(mcp: MongoMCPClient, user_id: str) -> dict[str, Any]:
+async def get_response_rate(mcp: FlarqMCPClient, user_id: str) -> dict[str, Any]:
     base_match: dict[str, Any] = {"user_id": user_id, "deleted": {"$ne": True}}
     pipeline: list[dict[str, Any]] = [
         {"$match": base_match},
@@ -73,7 +73,7 @@ async def get_response_rate(mcp: MongoMCPClient, user_id: str) -> dict[str, Any]
     }
 
 
-async def avg_days_to_response(mcp: MongoMCPClient, user_id: str) -> float | None:
+async def avg_days_to_response(mcp: FlarqMCPClient, user_id: str) -> float | None:
     """Mean days from application created to first movement (proxy: created → last_updated)."""
     pipeline: list[dict[str, Any]] = [
         {

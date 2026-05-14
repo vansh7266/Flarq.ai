@@ -1,4 +1,4 @@
-"""Executable Flarq agent tools (MongoMCPClient)."""
+"""Executable Flarq agent tools (FlarqMCPClient / real MCP)."""
 
 from __future__ import annotations
 
@@ -10,11 +10,11 @@ from bson.errors import InvalidId
 
 from app.services.applications.application_service import ApplicationService, is_valid_status
 from app.services.analytics.overview import get_cached_overview
-from app.services.mongodb.mcp_client import MongoMCPClient, utcnow
+from app.services.mongodb.mcp_client import FlarqMCPClient, utcnow
 from app.services.scheduler import alert_service
 
 
-async def get_profile_summary(mcp: MongoMCPClient, user_id: str) -> dict[str, Any]:
+async def get_profile_summary(mcp: FlarqMCPClient, user_id: str) -> dict[str, Any]:
     doc = await mcp.find_one("profiles", {"user_id": user_id})
     if doc is None:
         return {"found": False, "summary": "No profile saved yet."}
@@ -32,7 +32,7 @@ async def get_profile_summary(mcp: MongoMCPClient, user_id: str) -> dict[str, An
 
 
 async def search_applications(
-    mcp: MongoMCPClient,
+    mcp: FlarqMCPClient,
     user_id: str,
     *,
     status: str | None = None,
@@ -78,7 +78,7 @@ async def search_applications(
     }
 
 
-async def get_analytics_insight(mcp: MongoMCPClient, user_id: str) -> dict[str, Any]:
+async def get_analytics_insight(mcp: FlarqMCPClient, user_id: str) -> dict[str, Any]:
     data = await get_cached_overview(mcp, user_id)
     totals = data.get("totals") or {}
     rr = data.get("response_rate") or {}
@@ -94,12 +94,12 @@ async def get_analytics_insight(mcp: MongoMCPClient, user_id: str) -> dict[str, 
     return {"insight_text": text, "totals": totals, "week_over_week": rr.get("week_over_week", [])}
 
 
-async def get_stale_applications(mcp: MongoMCPClient, user_id: str) -> dict[str, Any]:
+async def get_stale_applications(mcp: FlarqMCPClient, user_id: str) -> dict[str, Any]:
     items = await alert_service.check_stale_applications(mcp, user_id)
     return {"stale": items, "count": len(items)}
 
 
-async def generate_follow_up(mcp: MongoMCPClient, user_id: str, application_id: str) -> dict[str, Any]:
+async def generate_follow_up(mcp: FlarqMCPClient, user_id: str, application_id: str) -> dict[str, Any]:
     try:
         email = await alert_service.generate_follow_up_email(
             mcp, application_id=application_id, user_id=user_id
@@ -110,7 +110,7 @@ async def generate_follow_up(mcp: MongoMCPClient, user_id: str, application_id: 
 
 
 async def update_application_status(
-    mcp: MongoMCPClient,
+    mcp: FlarqMCPClient,
     user_id: str,
     *,
     application_id: str,
@@ -134,7 +134,7 @@ async def update_application_status(
 
 
 async def dispatch_tool(
-    mcp: MongoMCPClient,
+    mcp: FlarqMCPClient,
     user_id: str,
     name: str,
     raw_args: dict[str, Any],

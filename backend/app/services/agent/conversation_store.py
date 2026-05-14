@@ -7,7 +7,7 @@ from typing import Any
 from bson import ObjectId
 from bson.errors import InvalidId
 
-from app.services.mongodb.mcp_client import MongoMCPClient, utcnow
+from app.services.mongodb.mcp_client import FlarqMCPClient, utcnow
 
 
 def _preview(text: str, n: int = 100) -> str:
@@ -15,7 +15,7 @@ def _preview(text: str, n: int = 100) -> str:
     return t if len(t) <= n else f"{t[: n - 1]}…"
 
 
-async def list_conversations(mcp: MongoMCPClient, user_id: str, limit: int = 20) -> list[dict[str, Any]]:
+async def list_conversations(mcp: FlarqMCPClient, user_id: str, limit: int = 20) -> list[dict[str, Any]]:
     docs = await mcp.find_many(
         "agent_conversations",
         {"user_id": user_id},
@@ -37,7 +37,7 @@ async def list_conversations(mcp: MongoMCPClient, user_id: str, limit: int = 20)
     return out
 
 
-async def get_conversation(mcp: MongoMCPClient, user_id: str, conversation_id: str) -> dict[str, Any] | None:
+async def get_conversation(mcp: FlarqMCPClient, user_id: str, conversation_id: str) -> dict[str, Any] | None:
     try:
         oid = ObjectId(conversation_id)
     except InvalidId:
@@ -50,7 +50,7 @@ async def get_conversation(mcp: MongoMCPClient, user_id: str, conversation_id: s
 
 
 async def append_turn(
-    mcp: MongoMCPClient,
+    mcp: FlarqMCPClient,
     user_id: str,
     *,
     conversation_id: str | None,

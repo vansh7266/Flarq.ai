@@ -6,6 +6,6 @@ def tool_catalog() -> list[dict[str, Any]]:
     return [
         {
             "name": "mongo.find",
-            "description": "Read-only MongoDB queries executed via the MongoMCPClient layer.",
+            "description": "Read-only MongoDB queries executed via the Flarq MCP MongoDB server.",
         }
     ]
