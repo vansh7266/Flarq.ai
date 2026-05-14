@@ -352,8 +352,8 @@ export function AnalyzePage() {
         jobDescriptionId={result?.jd_id}
         onCreate={async (payload) => {
           await applicationService.createApplication({
-            company: payload.company,
-            roleTitle: payload.roleTitle,
+            companyName: payload.company,
+            jobTitle: payload.roleTitle,
             jobDescriptionId: payload.jobDescriptionId,
             status: 'saved',
           })

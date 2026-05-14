@@ -11,6 +11,14 @@ export function useAgentHistory(enabled: boolean) {
 
 export function useAgentChat() {
   return useMutation({
-    mutationFn: agentService.sendAgentMessage,
+    mutationFn: ({
+      message,
+      conversationId,
+      signal,
+    }: {
+      message: string
+      conversationId?: string | null
+      signal?: AbortSignal
+    }) => agentService.sendAgentMessage(message, conversationId, signal),
   })
 }

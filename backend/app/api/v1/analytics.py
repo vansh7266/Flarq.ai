@@ -1,32 +1,31 @@
+from __future__ import annotations
+
+import asyncio
+
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
-from app.core.dependencies import CurrentUser, Database
+from app.core.dependencies import CurrentUser, MCPClient
 from app.core.responses import json_response
-from app.services.mongodb.aggregations.company_patterns import summarize_company_patterns
-from app.services.mongodb.aggregations.response_rate import compute_response_rate
-from app.services.mongodb.aggregations.skill_demand import summarize_skill_demand
-from app.services.mongodb.repositories.analytics_repo import AnalyticsRepository
+from app.services.analytics.overview import get_cached_overview
+from app.services.mongodb.aggregations.company_patterns import get_company_patterns
+from app.services.mongodb.aggregations.skill_demand import get_skill_demand
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
 
 
 @router.get("/overview", response_model=None)
-async def analytics_overview(user: CurrentUser, db: Database) -> JSONResponse:
-    repo = AnalyticsRepository(db)
-    base = await repo.overview(user["id"])
-    response_rate = await compute_response_rate(db, user["id"])
-    return json_response(
-        success=True,
-        message="Analytics overview",
-        data={**base, "responseRate": response_rate},
-    )
+async def analytics_overview(user: CurrentUser, mcp: MCPClient) -> JSONResponse:
+    data = await get_cached_overview(mcp, user["id"])
+    return json_response(success=True, message="Analytics overview", data=data)
 
 
 @router.get("/patterns", response_model=None)
-async def analytics_patterns(user: CurrentUser, db: Database) -> JSONResponse:
-    companies = await summarize_company_patterns(db, user["id"])
-    skills = await summarize_skill_demand(db, user["id"])
+async def analytics_patterns(user: CurrentUser, mcp: MCPClient) -> JSONResponse:
+    companies, skills = await asyncio.gather(
+        get_company_patterns(mcp, user["id"]),
+        get_skill_demand(mcp, user["id"]),
+    )
     return json_response(
         success=True,
         message="Pattern summary",
