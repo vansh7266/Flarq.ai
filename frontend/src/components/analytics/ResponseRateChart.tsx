@@ -17,7 +17,7 @@ interface ResponseRateChartProps {
   data?: ResponseDatum[]
 }
 
-const placeholder: ResponseDatum[] = [
+const fallbackData: ResponseDatum[] = [
   { week: 'W1', rate: 12 },
   { week: 'W2', rate: 18 },
   { week: 'W3', rate: 9 },
@@ -25,14 +25,14 @@ const placeholder: ResponseDatum[] = [
 ]
 
 export function ResponseRateChart({ data }: ResponseRateChartProps) {
-  const chartData = data ?? placeholder
+  const chartData = data ?? fallbackData
 
   return (
     <Card className="space-y-3">
       <div>
         <p className="text-sm font-semibold text-text-primary">Response rate</p>
         <p className="text-xs text-text-muted">
-          Powered by MongoDB aggregations in Phase 2.
+          Powered by MongoDB aggregations.
         </p>
       </div>
       <div className="h-64 w-full">
@@ -42,15 +42,15 @@ export function ResponseRateChart({ data }: ResponseRateChartProps) {
             <YAxis stroke="#64748b" fontSize={12} />
             <Tooltip
               contentStyle={{
-                backgroundColor: '#1a1a24',
-                border: '1px solid #2a2a3a',
+                backgroundColor: '#ffffff',
+                border: '1px solid #e2e8f0',
                 borderRadius: 8,
               }}
             />
             <Line
               type="monotone"
               dataKey="rate"
-              stroke="#6366f1"
+              stroke="#0d9488"
               strokeWidth={2}
               dot={{ r: 3 }}
               activeDot={{ r: 5 }}

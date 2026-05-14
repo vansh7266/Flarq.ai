@@ -32,6 +32,9 @@ class FlarqMCPClient:
     """
 
     def __init__(self) -> None:
+        self._session: ClientSession | None = None
+        self._cm_stdio = None
+        self._cm_session = None
         self.server_params = StdioServerParameters(
             command=sys.executable,
             args=[str(_MCP_SERVER_SCRIPT)],
@@ -42,41 +45,67 @@ class FlarqMCPClient:
             cwd=str(_BACKEND_ROOT),
         )
 
+    async def _ensure_session(self) -> None:
+        if self._session is not None:
+            return
+
+        try:
+            self._cm_stdio = stdio_client(self.server_params)
+            read, write = await self._cm_stdio.__aenter__()
+            self._cm_session = ClientSession(read, write)
+            self._session = await self._cm_session.__aenter__()
+            await self._session.initialize()
+            logger.info("mcp_session_initialized")
+        except Exception as e:
+            self._session = None
+            logger.error("mcp_session_init_failed", error=str(e))
+            raise
+
+    async def close(self) -> None:
+        if self._cm_session:
+            await self._cm_session.__aexit__(None, None, None)
+        if self._cm_stdio:
+            await self._cm_stdio.__aexit__(None, None, None)
+        self._session = None
+        self._cm_session = None
+        self._cm_stdio = None
+
     async def _call(self, tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         """Make a real MCP tool call via stdio transport."""
+        await self._ensure_session()
         start = time.monotonic()
 
         try:
-            async with stdio_client(self.server_params) as (read, write):
-                async with ClientSession(read, write) as session:
-                    await session.initialize()
-                    result = await session.call_tool(tool_name, arguments)
+            if self._session is None:
+                raise RuntimeError("MCP session not initialized")
+            result = await self._session.call_tool(tool_name, arguments)
 
-                    duration_ms = (time.monotonic() - start) * 1000
-                    logger.info(
-                        "mcp_tool_call",
-                        tool=tool_name,
-                        collection=arguments.get("collection"),
-                        duration_ms=round(duration_ms, 2),
-                    )
+            duration_ms = (time.monotonic() - start) * 1000
+            logger.info(
+                "mcp_tool_call",
+                tool=tool_name,
+                collection=arguments.get("collection"),
+                duration_ms=round(duration_ms, 2),
+            )
 
-                    if result.isError:
-                        text = ""
-                        if result.content:
-                            block = result.content[0]
-                            if hasattr(block, "text"):
-                                text = block.text
-                        raise RuntimeError(text or "MCP tool call failed")
+            if getattr(result, "isError", False):
+                text = ""
+                if result.content:
+                    block = result.content[0]
+                    if hasattr(block, "text"):
+                        text = block.text
+                raise RuntimeError(text or "MCP tool call failed")
 
-                    if not result.content:
-                        return {"success": False, "error": "No content returned"}
+            if not result.content:
+                return {"success": False, "error": "No content returned"}
 
-                    payload = json.loads(result.content[0].text)
-                    if payload.get("success") is False:
-                        raise RuntimeError(str(payload.get("error", "Unknown MCP error")))
-                    return payload
+            payload = json.loads(result.content[0].text)
+            if payload.get("success") is False:
+                raise RuntimeError(str(payload.get("error", "Unknown MCP error")))
+            return payload
 
         except Exception as e:
+            self._session = None
             logger.error("mcp_tool_call_failed", tool=tool_name, error=str(e))
             raise
 

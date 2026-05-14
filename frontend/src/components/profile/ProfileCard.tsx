@@ -23,7 +23,7 @@ export function ProfileCard({ fullName, email, headline }: ProfileCardProps) {
         <p className="text-sm text-text-secondary">{headline}</p>
       ) : (
         <p className="text-sm text-text-muted">
-          Add a headline and summary once profile editing ships in Phase 2.
+          Add a headline and summary to sharpen your job matches.
         </p>
       )}
     </Card>

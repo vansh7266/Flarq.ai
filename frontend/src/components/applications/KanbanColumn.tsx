@@ -35,14 +35,14 @@ export function KanbanColumn({
     <div ref={setNodeRef} className="flex min-w-[220px] max-w-[320px] flex-1 flex-col">
       <Card
         className={clsx(
-          'flex max-h-[calc(100vh-220px)] flex-1 flex-col border-l-4 bg-surface/60 p-3 shadow-sm transition-colors',
+          'flex max-h-[calc(100vh-220px)] flex-1 flex-col border-t-4 bg-surface p-3 shadow-sm transition-colors',
           borderClass,
-          isOver && 'ring-2 ring-indigo-400/60'
+          isOver && 'ring-2 ring-primary/40'
         )}
       >
       <div className="mb-3 flex items-center justify-between gap-2">
         <p className="text-sm font-semibold text-text-primary">{title}</p>
-        <span className="rounded-full bg-background px-2 py-0.5 text-xs font-medium text-text-muted">
+        <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-text-muted">
           {applications.length}
         </span>
       </div>
@@ -64,6 +64,11 @@ export function KanbanColumn({
           </motion.div>
         ))}
       </div>
+      {applications.length === 0 ? (
+        <div className="flex min-h-28 flex-col items-center justify-center rounded-xl border border-dashed border-border bg-white text-center text-xs text-text-muted">
+          Drop cards here
+        </div>
+      ) : null}
       {onAdd ? (
         <Button type="button" variant="ghost" className="mt-3 w-full text-xs" onClick={onAdd}>
           + Add

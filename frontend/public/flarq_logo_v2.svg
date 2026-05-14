@@ -1,0 +1,35 @@
+<svg width="100%" viewBox="0 0 680 220" role="img" xmlns="http://www.w3.org/2000/svg" style="">
+  <title style="fill:rgb(0, 0, 0);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto">Flarq Logo v2</title>
+  <desc style="fill:rgb(0, 0, 0);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto">Flarq AI logo with animated pencil-draw effect, teal color scheme, light theme</desc>
+  <defs>
+    
+    <linearGradient id="tealGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0d9488"/>
+      <stop offset="100%" style="stop-color:#0891b2"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Icon container — rounded square, light fill, teal border drawn on -->
+  <rect x="185" y="30" width="130" height="130" rx="30" fill="#f0fdfa" stroke="none" style="fill:rgb(240, 253, 250);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- Pencil-draw border animation -->
+  <rect x="185" y="30" width="130" height="130" rx="30" fill="none" stroke="#0d9488" stroke-width="2.5" style="fill:none;stroke:rgb(13, 148, 136);color:rgb(255, 255, 255);stroke-width:2.5px;stroke-dasharray:400px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- Bold F shape drawn -->
+  <line x1="218" y1="55" x2="218" y2="135" stroke="#0d9488" stroke-width="9" stroke-linecap="round" style="fill:rgb(0, 0, 0);stroke:rgb(13, 148, 136);color:rgb(255, 255, 255);stroke-width:9px;stroke-dasharray:400px;stroke-linecap:round;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <line x1="218" y1="55" x2="268" y2="55" stroke="#0d9488" stroke-width="9" stroke-linecap="round" style="fill:rgb(0, 0, 0);stroke:rgb(13, 148, 136);color:rgb(255, 255, 255);stroke-width:9px;stroke-dasharray:400px;stroke-linecap:round;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <line x1="218" y1="92" x2="255" y2="92" stroke="#0d9488" stroke-width="9" stroke-linecap="round" style="fill:rgb(0, 0, 0);stroke:rgb(13, 148, 136);color:rgb(255, 255, 255);stroke-width:9px;stroke-dasharray:200px;stroke-linecap:round;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- Signal arc 1 -->
+  <path d="M278 80 Q292 95 278 110" fill="none" stroke="#0891b2" stroke-width="4" stroke-linecap="round" style="fill:none;stroke:rgb(8, 145, 178);color:rgb(255, 255, 255);stroke-width:4px;stroke-dasharray:200px;stroke-linecap:round;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <!-- Signal arc 2 -->
+  <path d="M278 66 Q305 95 278 124" fill="none" stroke="#0891b2" stroke-width="3" stroke-linecap="round" opacity="0.5" style="fill:none;stroke:rgb(8, 145, 178);color:rgb(255, 255, 255);stroke-width:3px;stroke-dasharray:120px;stroke-linecap:round;stroke-linejoin:miter;opacity:0.5;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <!-- Dot -->
+  <circle cx="294" cy="128" r="6" fill="#0d9488" stroke="none" style="stroke-dasharray:40;stroke-dashoffset:40;animation:draw 0.5s 1s ease forwards;fill:rgb(13, 148, 136);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-dasharray:40px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- Wordmark -->
+  <text x="335" y="108" font-family="system-ui,-apple-system,sans-serif" font-size="68" font-weight="800" letter-spacing="-3" fill="url(#tealGrad)" style="stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:system-ui, -apple-system, sans-serif;font-size:68px;font-weight:800;text-anchor:start;dominant-baseline:auto">flarq</text>
+
+  <!-- Tagline -->
+  <text x="337" y="136" font-family="system-ui,-apple-system,sans-serif" font-size="13" font-weight="500" fill="#64748b" letter-spacing="4" style="fill:rgb(100, 116, 139);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:system-ui, -apple-system, sans-serif;font-size:13px;font-weight:500;text-anchor:start;dominant-baseline:auto">AI JOB SEARCH AGENT</text>
+</svg>

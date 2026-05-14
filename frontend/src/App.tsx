@@ -14,6 +14,7 @@ import { Spinner } from './components/ui/Spinner'
 function ProtectedLayout() {
   const { isAuthenticated, isHydrated } = useAuth()
   const location = useLocation()
+  const requireAuth = import.meta.env.VITE_REQUIRE_AUTH === 'true'
 
   if (!isHydrated) {
     return (
@@ -23,7 +24,7 @@ function ProtectedLayout() {
     )
   }
 
-  if (false && !isAuthenticated) {
+  if (requireAuth && !isAuthenticated) {
     return <Navigate to="/auth" replace state={{ from: location.pathname }} />
   }
 

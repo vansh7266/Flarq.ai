@@ -291,6 +291,18 @@ async def _call_tool(name: str, arguments: dict[str, Any]) -> list[types.TextCon
 
         elif name == "mongodb_aggregate":
             pipeline = list(arguments["pipeline"])
+            if len(pipeline) > 20:
+                return [
+                    types.TextContent(
+                        type="text",
+                        text=json.dumps(
+                            {
+                                "success": False,
+                                "error": "Pipeline too complex (max 20 stages)",
+                            }
+                        ),
+                    )
+                ]
             max_results = int(arguments.get("max_results", 10000))
             docs = await collection.aggregate(pipeline).to_list(length=max_results)
             result = mongo_serialize(docs)

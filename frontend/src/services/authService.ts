@@ -25,6 +25,7 @@ interface LoginResponseData {
 
 interface RefreshResponseData {
   access_token: string
+  refresh_token: string
   expires_in: number
 }
 
@@ -90,7 +91,7 @@ export async function refreshSession(): Promise<AuthTokens | null> {
 
   return {
     accessToken: data.data.access_token,
-    refreshToken,
+    refreshToken: data.data.refresh_token,
     tokenType: 'bearer',
     expiresIn: data.data.expires_in,
   }

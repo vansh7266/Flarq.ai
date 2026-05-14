@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { Eye, EyeOff } from 'lucide-react'
 import { signupSchema, type SignupFormValues } from '../../utils/validators'
 import { Input } from '../ui/Input'
 import { Button } from '../ui/Button'
@@ -10,6 +12,7 @@ interface SignupFormProps {
 }
 
 export function SignupForm({ onSubmit, isSubmitting }: SignupFormProps) {
+  const [showPassword, setShowPassword] = useState(false)
   const {
     register,
     handleSubmit,
@@ -50,21 +53,32 @@ export function SignupForm({ onSubmit, isSubmitting }: SignupFormProps) {
         error={errors.email?.message}
         {...register('email')}
       />
-      <Input
-        label="Password"
-        type="password"
-        autoComplete="new-password"
-        error={errors.password?.message}
-        {...register('password')}
-      />
+      <div className="relative">
+        <Input
+          label="Password"
+          type={showPassword ? 'text' : 'password'}
+          autoComplete="new-password"
+          error={errors.password?.message}
+          className="pr-11"
+          {...register('password')}
+        />
+        <button
+          type="button"
+          className="absolute right-3 top-9 text-text-muted transition-colors hover:text-primary"
+          aria-label={showPassword ? 'Hide password' : 'Show password'}
+          onClick={() => setShowPassword((value) => !value)}
+        >
+          {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+        </button>
+      </div>
       <Input
         label="Confirm password"
-        type="password"
+        type={showPassword ? 'text' : 'password'}
         autoComplete="new-password"
         error={errors.confirmPassword?.message}
         {...register('confirmPassword')}
       />
-      <Button type="submit" className="w-full" isLoading={isSubmitting}>
+      <Button type="submit" className="h-12 w-full" isLoading={isSubmitting}>
         Create account
       </Button>
     </form>

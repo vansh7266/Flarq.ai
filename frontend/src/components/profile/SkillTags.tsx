@@ -8,7 +8,7 @@ export function SkillTags({ skills }: SkillTagsProps) {
   if (skills.length === 0) {
     return (
       <p className="text-sm text-text-muted">
-        Parsed skills from your resume will appear here after Phase 2.
+        Parsed skills from your resume will appear here after upload.
       </p>
     )
   }

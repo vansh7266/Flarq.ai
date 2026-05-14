@@ -22,8 +22,7 @@ export function GapAnalysisCard({ rows }: GapAnalysisCardProps) {
       <Card>
         <p className="text-sm font-semibold text-text-primary">Gap analysis</p>
         <p className="mt-2 text-sm text-text-secondary">
-          Run an analysis to see how your profile stacks up against this role. Phase 2
-          connects Gemini gap scoring to this card.
+          Run an analysis to see how your profile stacks up against this role.
         </p>
       </Card>
     )

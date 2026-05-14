@@ -36,6 +36,18 @@ class Settings(BaseSettings):
             raise ValueError("GOOGLE_CLOUD_PROJECT is required")
         return self
 
+    @model_validator(mode="after")
+    def check_secrets(self) -> "Settings":
+        weak = {
+            "your-super-secret-jwt-key-change-in-production",
+            "change-me",
+            "secret",
+            "",
+        }
+        if self.environment.lower() == "production" and self.jwt_secret_key in weak:
+            raise ValueError("JWT_SECRET_KEY must be changed in production")
+        return self
+
 
 @lru_cache
 def get_settings() -> Settings:

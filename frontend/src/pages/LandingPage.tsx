@@ -1,169 +1,282 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowRight, BarChart3, FileText, Radar } from 'lucide-react'
+import { ArrowRight, ClipboardList, FilePenLine, Play, Target } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { Button } from '../components/ui/Button'
-import { Card } from '../components/ui/Card'
-import { APP_NAME } from '../utils/constants'
+import { usePageTitle } from '../hooks/usePageTitle'
+import { fadeUp, staggerContainer } from '../utils/animations'
+
+const stats = [
+  '10,000+ cover letters generated',
+  '3.2x average response rate',
+  'Trusted by job seekers worldwide',
+] as const
 
 const features = [
   {
-    title: 'Gap analysis',
+    title: 'Gap Analysis',
     description:
-      'Map your resume to any job description and surface the highest-impact gaps before you apply.',
-    icon: Radar,
+      "Know exactly which skills you're missing before you apply. Flarq compares your profile to any job description.",
+    icon: Target,
   },
   {
-    title: 'Cover letters',
+    title: 'Cover Letters',
     description:
-      'Generate tailored, professional narratives grounded in your profile and the role itself.',
-    icon: FileText,
+      'Never send a generic cover letter. AI-written, role-specific, in your tone, generated in seconds.',
+    icon: FilePenLine,
   },
   {
-    title: 'Smart analytics',
+    title: 'Application Tracking',
     description:
-      'MongoDB aggregations reveal response patterns, company trends, and where to double down.',
-    icon: BarChart3,
+      'Your entire job search in one board. Know exactly where every application stands.',
+    icon: ClipboardList,
   },
 ] as const
 
 const steps = [
-  'Upload your resume and capture structured skills.',
-  'Paste a job description for deep requirement extraction.',
-  'Run gap analysis and generate a tailored cover letter.',
-  'Track every application on a Kanban board with proactive follow-ups.',
+  {
+    title: 'Upload your resume',
+    description: 'Parsed by Gemini instantly.',
+  },
+  {
+    title: 'Paste a job description',
+    description: 'AI extracts requirements.',
+  },
+  {
+    title: 'Review your gap analysis',
+    description: 'See where you stand.',
+  },
+  {
+    title: 'Apply with confidence',
+    description: 'Cover letter ready to go.',
+  },
 ] as const
 
-const fadeUp = {
-  initial: { opacity: 0, y: 16 },
-  whileInView: { opacity: 1, y: 0 },
-  viewport: { once: true, margin: '-80px' },
-  transition: { duration: 0.35, ease: 'easeOut' as const },
+function NodeGraph() {
+  const nodes = [
+    [72, 74],
+    [192, 46],
+    [308, 100],
+    [220, 210],
+    [92, 236],
+    [342, 250],
+  ]
+  const lines = [
+    [0, 1],
+    [1, 2],
+    [1, 3],
+    [0, 4],
+    [3, 4],
+    [3, 5],
+    [2, 5],
+  ]
+
+  return (
+    <motion.svg
+      viewBox="0 0 420 310"
+      className="h-full w-full animate-float"
+      aria-hidden="true"
+      initial="hidden"
+      animate="visible"
+      variants={staggerContainer}
+    >
+      <defs>
+        <linearGradient id="nodeStroke" x1="0" x2="1" y1="0" y2="1">
+          <stop offset="0%" stopColor="#0d9488" />
+          <stop offset="100%" stopColor="#0891b2" />
+        </linearGradient>
+      </defs>
+      {lines.map(([from, to], index) => (
+        <motion.line
+          key={`${from}-${to}`}
+          x1={nodes[from][0]}
+          y1={nodes[from][1]}
+          x2={nodes[to][0]}
+          y2={nodes[to][1]}
+          stroke="url(#nodeStroke)"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeDasharray="1000"
+          initial={{ strokeDashoffset: 1000, opacity: 0.2 }}
+          animate={{ strokeDashoffset: 0, opacity: 0.75 }}
+          transition={{ delay: index * 0.12, duration: 1.8, ease: 'easeOut' }}
+        />
+      ))}
+      {nodes.map(([cx, cy], index) => (
+        <motion.g
+          key={`${cx}-${cy}`}
+          variants={{
+            hidden: { opacity: 0, scale: 0.6 },
+            visible: {
+              opacity: 1,
+              scale: 1,
+              transition: { type: 'spring', stiffness: 260, damping: 18, delay: index * 0.1 },
+            },
+          }}
+          style={{ transformOrigin: `${cx}px ${cy}px` }}
+        >
+          <circle cx={cx} cy={cy} r="25" fill="#f0fdfa" stroke="#0d9488" strokeWidth="2.5" />
+          <circle cx={cx} cy={cy} r="6" fill="#0d9488" />
+        </motion.g>
+      ))}
+    </motion.svg>
+  )
+}
+
+function DrawIcon({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-light text-primary transition-transform group-hover:-rotate-3 group-hover:scale-105">
+      {children}
+    </div>
+  )
 }
 
 export function LandingPage() {
-  return (
-    <div className="flex min-h-screen flex-col bg-background text-text-primary">
-      <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-6">
-        <div className="flex items-center gap-2 text-sm font-semibold tracking-tight">
-          <span className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-accent" />
-          {APP_NAME}
-        </div>
-        <div className="flex items-center gap-3">
-          <Link to="/auth">
-            <Button type="button" variant="ghost">
-              Sign in
-            </Button>
-          </Link>
-          <Link to="/auth?mode=signup">
-            <Button type="button" className="gap-2">
-              Launch console
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-          </Link>
-        </div>
-      </header>
+  usePageTitle('Landing')
 
-      <main className="flex-1">
-        <section className="mx-auto flex max-w-6xl flex-col gap-10 px-4 pb-20 pt-10 md:flex-row md:items-center">
-          <motion.div className="flex-1 space-y-6" {...fadeUp}>
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">
-              Google Cloud Rapid Agent Hackathon
-            </p>
-            <h1 className="text-4xl font-bold tracking-tight md:text-5xl">
-              Your{' '}
-              <span className="animate-gradient-shift bg-gradient-to-r from-primary via-accent to-primary bg-[length:200%_auto] bg-clip-text text-transparent">
-                AI-powered job search co-pilot
-              </span>
-            </h1>
-            <p className="max-w-xl text-lg text-text-secondary">
-              {APP_NAME} is an agentic operating system for your career: structured memory,
-              analytical superpowers in MongoDB, and proactive guidance across every stage
-              of your search.
-            </p>
-            <div className="flex flex-wrap gap-3">
+  return (
+    <div className="min-h-screen bg-white text-text-primary">
+      <section className="mesh-bg flex min-h-[82vh] flex-col">
+        <header className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6">
+          <Link to="/" className="flex items-center">
+            <img src="/logo.svg" alt="Flarq" className="h-8 w-auto" />
+          </Link>
+          <div className="flex items-center gap-3">
+            <Link to="/auth">
+              <Button type="button" variant="ghost" className="h-10">
+                Sign in
+              </Button>
+            </Link>
+            <Link to="/auth?mode=signup">
+              <Button type="button" className="h-10">
+                Start free
+              </Button>
+            </Link>
+          </div>
+        </header>
+
+        <main className="mx-auto grid w-full max-w-7xl flex-1 items-center gap-10 px-4 pb-6 pt-4 sm:px-6 lg:grid-cols-[1.2fr_0.8fr]">
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={staggerContainer}
+            className="max-w-3xl"
+          >
+            <motion.div
+              variants={fadeUp}
+              className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-white/80 px-4 py-2 text-sm font-semibold text-primary shadow-sm"
+            >
+              <span className="h-2 w-2 rounded-full bg-primary animate-pulse-glow" />
+              Powered by Gemini + Google Cloud
+            </motion.div>
+            <motion.h1
+              variants={fadeUp}
+              className="text-5xl font-extrabold leading-[0.95] text-text-primary sm:text-6xl lg:text-[72px]"
+            >
+              <span className="block">Land your next</span>
+              <span className="block text-gradient">role faster</span>
+              <span className="block">with AI.</span>
+            </motion.h1>
+            <motion.p
+              variants={fadeUp}
+              className="mt-6 max-w-xl text-lg leading-8 text-text-secondary sm:text-xl"
+            >
+              Flarq analyzes job descriptions, identifies skill gaps, writes tailored cover
+              letters, and tracks every application so you can focus on interviews.
+            </motion.p>
+            <motion.div variants={fadeUp} className="mt-8 flex flex-wrap gap-4">
               <Link to="/auth?mode=signup">
-                <Button type="button" className="gap-2">
+                <Button type="button" className="h-[52px] px-6">
                   Start for free
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </Link>
-              <Link to="/auth">
-                <Button type="button" variant="secondary">
-                  View live workspace
+              <Link to="/analyze">
+                <Button type="button" variant="secondary" className="h-[52px] px-6">
+                  <Play className="h-4 w-4 fill-current" />
+                  See how it works
                 </Button>
               </Link>
-            </div>
+            </motion.div>
+            <motion.div variants={fadeUp} className="mt-6 flex flex-wrap gap-3">
+              {stats.map((stat) => (
+                <span
+                  key={stat}
+                  className="inline-flex items-center gap-2 rounded-full border border-border bg-white/85 px-3 py-1.5 text-xs font-semibold text-text-secondary shadow-sm"
+                >
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                  {stat}
+                </span>
+              ))}
+            </motion.div>
           </motion.div>
 
-          <motion.div
-            className="flex-1"
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.45, ease: 'easeOut', delay: 0.05 }}
-          >
-            <Card className="border-primary/30 bg-gradient-to-br from-surface to-surface-elevated p-6 shadow-glow">
-              <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-                Live agent preview
-              </p>
-              <p className="mt-4 text-sm text-text-secondary">
-                Gemini parses resumes, analyzes job descriptions, and reasons over your
-                application history — with MongoDB MCP as the analytical backbone.
-              </p>
-              <div className="mt-6 grid gap-3 text-xs text-text-muted">
-                <div className="rounded-lg border border-border bg-background/60 p-3">
-                  Detected 14 missing keywords for Staff Engineer @ Northwind
-                </div>
-                <div className="rounded-lg border border-border bg-background/60 p-3">
-                  Suggested follow-up for applications idle &gt; 10 days
-                </div>
-              </div>
-            </Card>
-          </motion.div>
-        </section>
+          <div className="hidden min-h-[310px] lg:block lg:min-h-[420px]">
+            <NodeGraph />
+          </div>
+        </main>
+      </section>
 
-        <section className="border-y border-border bg-surface/40 py-16">
-          <div className="mx-auto grid max-w-6xl gap-6 px-4 md:grid-cols-3">
+      <section className="bg-white py-20">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="text-3xl font-extrabold text-text-primary sm:text-4xl">
+              Everything you need to land the job
+            </h2>
+          </div>
+          <div className="mt-12 grid gap-5 md:grid-cols-3">
             {features.map((feature) => (
-              <motion.div key={feature.title} {...fadeUp}>
-                <Card hoverable className="h-full space-y-3 border-border/80">
-                  <feature.icon className="h-6 w-6 text-primary" />
-                  <h3 className="text-lg font-semibold tracking-tight">{feature.title}</h3>
-                  <p className="text-sm text-text-secondary">{feature.description}</p>
-                </Card>
-              </motion.div>
+              <div
+                key={feature.title}
+                className="gradient-border-hover group rounded-xl border border-border bg-white p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-soft"
+              >
+                <DrawIcon>
+                  <feature.icon className="h-6 w-6" strokeWidth={2.2} />
+                </DrawIcon>
+                <h3 className="mt-5 text-lg font-extrabold text-text-primary">{feature.title}</h3>
+                <p className="mt-3 text-sm leading-6 text-text-secondary">{feature.description}</p>
+              </div>
             ))}
           </div>
-        </section>
+        </div>
+      </section>
 
-        <section className="mx-auto max-w-6xl space-y-8 px-4 py-16">
-          <motion.div className="space-y-3" {...fadeUp}>
-            <h2 className="text-2xl font-bold tracking-tight md:text-3xl">How it works</h2>
-            <p className="max-w-2xl text-text-secondary">
-              A guided, four-step flow takes you from raw materials to a living, searchable
-              record of your search — optimized for both humans and agents.
-            </p>
-          </motion.div>
-          <div className="grid gap-4 md:grid-cols-2">
+      <section className="bg-surface py-20">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6">
+          <h2 className="text-center text-3xl font-extrabold text-text-primary sm:text-4xl">
+            Get hired in 4 steps
+          </h2>
+          <div className="mt-12 grid gap-8 md:grid-cols-4">
             {steps.map((step, index) => (
-              <motion.div key={step} {...fadeUp} transition={{ delay: index * 0.05 }}>
-                <Card className="flex gap-4 border-dashed border-border/80">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/15 text-sm font-semibold text-primary">
-                    {index + 1}
-                  </div>
-                  <p className="text-sm text-text-secondary">{step}</p>
-                </Card>
-              </motion.div>
+              <div key={step.title} className="relative">
+                {index < steps.length - 1 ? (
+                  <div className="absolute left-10 top-6 hidden h-px w-[calc(100%_-_2.5rem)] border-t border-dashed border-primary/40 md:block" />
+                ) : null}
+                <div className="relative z-10 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-sm font-extrabold text-white shadow-glow">
+                  {index + 1}
+                </div>
+                <h3 className="mt-5 text-base font-extrabold text-text-primary">{step.title}</h3>
+                <p className="mt-2 text-sm text-text-secondary">{step.description}</p>
+              </div>
             ))}
           </div>
-        </section>
-      </main>
+        </div>
+      </section>
 
-      <footer className="border-t border-border bg-surface/60">
-        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-8 text-sm text-text-muted md:flex-row md:items-center md:justify-between">
-          <span>© {new Date().getFullYear()} {APP_NAME}. Built for serious job seekers.</span>
-          <span className="text-xs text-text-secondary">
-            MongoDB Atlas · Gemini · Google Cloud Agent Builder
-          </span>
+      <footer className="border-t border-border bg-white">
+        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-8 text-sm text-text-secondary sm:px-6 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-2">
+            <img src="/logo.svg" alt="Flarq" className="h-7 w-auto" />
+          </div>
+          <div className="flex items-center gap-6">
+            <Link to="/privacy" className="hover:text-primary">
+              Privacy Policy
+            </Link>
+            <Link to="/terms" className="hover:text-primary">
+              Terms of Service
+            </Link>
+          </div>
+          <span>© 2026 Flarq. All rights reserved.</span>
         </div>
       </footer>
     </div>

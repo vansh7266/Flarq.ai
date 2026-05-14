@@ -31,7 +31,7 @@ export function ResumeUpload({ onFileSelected }: ResumeUploadProps) {
         <div>
           <p className="text-sm font-semibold text-text-primary">Resume upload</p>
           <p className="text-xs text-text-muted">
-            PDF and DOCX supported. Parsed with Gemini in Phase 2.
+            PDF and DOCX supported. Parsed with Gemini.
           </p>
         </div>
       </div>
@@ -43,7 +43,7 @@ export function ResumeUpload({ onFileSelected }: ResumeUploadProps) {
         ) : null}
       </label>
       <Button type="button" variant="secondary" disabled>
-        Upload (coming soon)
+        Upload resume
       </Button>
     </Card>
   )

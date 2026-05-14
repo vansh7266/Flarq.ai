@@ -14,12 +14,12 @@ export function JDPasteBox({ onAnalyze }: JDPasteBoxProps) {
       <div>
         <p className="text-sm font-semibold text-text-primary">Job description</p>
         <p className="text-xs text-text-muted">
-          Paste the JD text. Gemini extraction wires in during Phase 2.
+          Paste the role details and Flarq will extract the requirements.
         </p>
       </div>
       <textarea
-        className="min-h-[180px] w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-text-primary outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/40"
-        placeholder="Paste responsibilities, requirements, and nice-to-haves..."
+        className="min-h-[180px] w-full rounded-xl border border-border bg-white px-3 py-2 text-sm text-text-primary outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/30"
+        aria-label="Job description"
         value={text}
         onChange={(event) => {
           setText(event.target.value)

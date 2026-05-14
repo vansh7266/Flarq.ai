@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Request, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.dependencies import CurrentUser, MCPClient
+from app.core.limiter import limiter
 from app.core.responses import json_response
 from app.services.agent.agent_builder import run_agent
 from app.services.agent import conversation_store
@@ -22,7 +23,13 @@ class AgentChatRequest(BaseModel):
 
 
 @router.post("/chat", response_model=None)
-async def agent_chat(payload: AgentChatRequest, user: CurrentUser, mcp: MCPClient) -> JSONResponse:
+@limiter.limit("10/minute")
+async def agent_chat(
+    request: Request,
+    payload: AgentChatRequest,
+    user: CurrentUser,
+    mcp: MCPClient,
+) -> JSONResponse:
     history: list[dict[str, Any]] = []
     conv_id = payload.conversation_id
     if conv_id:

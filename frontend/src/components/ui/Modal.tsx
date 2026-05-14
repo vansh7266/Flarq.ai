@@ -33,7 +33,7 @@ export function Modal({ open, title, onClose, children, className }: ModalProps)
     <AnimatePresence>
       {open ? (
         <motion.div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -45,8 +45,8 @@ export function Modal({ open, title, onClose, children, className }: ModalProps)
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 12 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
-            className={cn(
-              'relative w-full max-w-lg rounded-xl border border-border bg-surface p-6 shadow-glow',
+              className={cn(
+              'relative w-full max-w-lg rounded-2xl border border-border bg-white p-6 shadow-soft',
               className
             )}
           >

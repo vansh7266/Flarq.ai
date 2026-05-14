@@ -34,7 +34,7 @@ export function ApplicationsAddModal({
   return (
     <Modal open={open} onClose={onClose} title="Add application">
       <p className="mb-4 text-sm text-text-secondary">
-        Track a role in your FLARQ pipeline.
+        Track a role in your Flarq pipeline.
       </p>
       <form
         className="space-y-4"
@@ -90,7 +90,7 @@ export function ApplicationsAddModal({
                 type="button"
                 onClick={() => setPriority(p)}
                 className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ring-1 ring-border transition ${
-                  priority === p ? 'bg-indigo-600 text-white ring-indigo-600' : 'bg-surface text-text-secondary'
+                  priority === p ? 'teal-cta text-white ring-primary' : 'bg-surface text-text-secondary'
                 }`}
               >
                 {p}
@@ -102,7 +102,7 @@ export function ApplicationsAddModal({
           label="Tags (comma separated)"
           value={tags}
           onChange={(ev) => setTags(ev.target.value)}
-          placeholder="python, remote, fintech"
+          aria-label="Tags"
         />
         <div className="flex justify-end gap-2">
           <Button type="button" variant="ghost" onClick={onClose}>

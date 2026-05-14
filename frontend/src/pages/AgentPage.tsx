@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { PageWrapper } from '../components/layout/PageWrapper'
+import { Plus, Settings } from 'lucide-react'
+import { Navbar } from '../components/layout/Navbar'
 import { AgentChatPanel } from '../components/agent/AgentChatPanel'
 import { useAgentChat, useAgentHistory } from '../hooks/useAgent'
 import { useAuth } from '../hooks/useAuth'
+import { usePageTitle } from '../hooks/usePageTitle'
 import * as agentService from '../services/agentService'
 import type { AgentMessage } from '../types/agent.types'
-import { Button } from '../components/ui/Button'
-import { Spinner } from '../components/ui/Spinner'
 
 function createMessage(
   role: AgentMessage['role'],
@@ -28,15 +28,36 @@ function createMessage(
   }
 }
 
+function initials(name?: string | null, email?: string | null) {
+  const source = name?.trim() || email?.trim() || 'Flarq'
+  return source
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('')
+}
+
+function timeAgo(iso?: string | null) {
+  if (!iso) return ''
+  const parsed = Date.parse(iso)
+  if (Number.isNaN(parsed)) return ''
+  const minutes = Math.max(0, Math.floor((Date.now() - parsed) / 60000))
+  if (minutes < 1) return 'now'
+  if (minutes < 60) return `${minutes}m`
+  const hours = Math.floor(minutes / 60)
+  return hours < 24 ? `${hours}h` : `${Math.floor(hours / 24)}d`
+}
+
 export function AgentPage() {
-  const { isAuthenticated } = useAuth()
+  usePageTitle('Agent')
+  const { isAuthenticated, user } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   const [messages, setMessages] = useState<AgentMessage[]>([])
   const [conversationId, setConversationId] = useState<string | null>(null)
   const [suggestions, setSuggestions] = useState<string[]>([
     'How am I doing?',
     'What needs follow-up?',
-    'Analyze my patterns',
+    'Show analytics',
   ])
   const chatMutation = useAgentChat()
   const historyQuery = useAgentHistory(isAuthenticated)
@@ -66,7 +87,7 @@ export function AgentPage() {
         setSuggestions(
           response.suggestions && response.suggestions.length >= 3
             ? response.suggestions
-            : ['How am I doing?', 'What needs follow-up?', 'Analyze my patterns']
+            : ['How am I doing?', 'What needs follow-up?', 'Show analytics']
         )
         setMessages((previous) => [
           ...previous,
@@ -78,7 +99,7 @@ export function AgentPage() {
           ...previous,
           createMessage(
             'assistant',
-            'Something went wrong reaching the agent. Check GOOGLE_CLOUD_PROJECT and Vertex AI auth (see backend/setup_gcp_auth.md).'
+            'Something went wrong reaching the agent. Check Vertex AI auth and try again.'
           ),
         ])
       }
@@ -98,7 +119,7 @@ export function AgentPage() {
     promptHandledRef.current = false
     setMessages([])
     setConversationId(null)
-    setSuggestions(['How am I doing?', 'What needs follow-up?', 'Analyze my patterns'])
+    setSuggestions(['How am I doing?', 'What needs follow-up?', 'Show analytics'])
   }
 
   const loadConversation = async (id: string) => {
@@ -118,60 +139,75 @@ export function AgentPage() {
   }
 
   return (
-    <PageWrapper>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-text-primary">FLARQ agent</h1>
-          <p className="mt-2 max-w-2xl text-text-secondary">
-            Ask in natural language — the agent pulls your profile, applications, analytics, and
-            drafts follow-ups when it helps.
-          </p>
-        </div>
-
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,3fr)]">
-          <aside className="space-y-3 rounded-xl border border-border bg-surface/50 p-4">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-semibold text-text-primary">History</p>
-              <Button type="button" variant="secondary" className="text-xs" onClick={startNew}>
-                New
-              </Button>
+    <div className="min-h-screen bg-white">
+      <Navbar />
+      <div className="flex h-[calc(100vh-64px)]">
+        <aside className="hidden w-[280px] shrink-0 flex-col bg-slate-900 text-white md:flex">
+          <div className="border-b border-white/10 p-5">
+            <div>
+              <p className="text-2xl font-extrabold tracking-normal">flarq</p>
+              <p className="text-sm font-semibold text-teal-400">Agent</p>
             </div>
-            {historyQuery.isLoading ? (
-              <Spinner className="h-6 w-6" />
-            ) : (
-              <ul className="max-h-[520px] space-y-2 overflow-y-auto text-sm">
-                {(historyQuery.data ?? []).map((row) => (
-                  <li key={row.conversationId}>
-                    <button
-                      type="button"
-                      onClick={() => void loadConversation(row.conversationId)}
-                      className={`w-full rounded-lg border px-3 py-2 text-left transition ${
-                        conversationId === row.conversationId
-                          ? 'border-indigo-500 bg-indigo-500/10'
-                          : 'border-transparent hover:border-border hover:bg-background'
-                      }`}
-                    >
-                      <p className="line-clamp-2 text-text-primary">{row.preview || 'Chat'}</p>
-                      <p className="text-[10px] text-text-muted">
-                        {row.messageCount} msgs ·{' '}
-                        {row.updatedAt ? new Date(row.updatedAt).toLocaleString() : ''}
-                      </p>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </aside>
+            <button
+              type="button"
+              className="teal-cta mt-6 flex h-11 w-full items-center justify-center gap-2 rounded-lg text-sm font-semibold text-white"
+              onClick={startNew}
+            >
+              <Plus className="h-4 w-4" />
+              New conversation
+            </button>
+          </div>
 
-          <AgentChatPanel
-            messages={orderedMessages}
-            isSending={isSending}
-            suggestions={suggestions}
-            onSend={handleSend}
-            onPickSuggestion={(s) => void handleSend(s)}
-          />
-        </div>
+          <div className="min-h-0 flex-1 overflow-y-auto p-3">
+            {historyQuery.data && historyQuery.data.length > 0 ? (
+              <div className="space-y-1">
+                {historyQuery.data.map((row) => (
+                  <button
+                    key={row.conversationId}
+                    type="button"
+                    onClick={() => void loadConversation(row.conversationId)}
+                    className={`flex w-full items-center gap-2 rounded-lg px-3 py-3 text-left transition hover:bg-slate-800 ${
+                      conversationId === row.conversationId
+                        ? 'border-l-[3px] border-teal-400 bg-slate-800'
+                        : 'border-l-[3px] border-transparent'
+                    }`}
+                  >
+                    <span className="min-w-0 flex-1 truncate text-sm text-slate-100">
+                      {row.preview || 'Conversation'}
+                    </span>
+                    <span className="text-xs text-slate-400">{timeAgo(row.updatedAt)}</span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="flex h-full items-center justify-center text-center text-sm text-slate-400">
+                No conversations yet.
+              </div>
+            )}
+          </div>
+
+          <div className="border-t border-white/10 p-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-sm font-extrabold text-white">
+                {initials(user?.fullName, user?.email)}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-white">{user?.fullName ?? 'Flarq user'}</p>
+                <p className="text-xs text-slate-400">Workspace</p>
+              </div>
+              <Settings className="h-4 w-4 text-slate-400" />
+            </div>
+          </div>
+        </aside>
+
+        <AgentChatPanel
+          messages={orderedMessages}
+          isSending={isSending}
+          suggestions={suggestions}
+          onSend={handleSend}
+          onPickSuggestion={(text) => void handleSend(text)}
+        />
       </div>
-    </PageWrapper>
+    </div>
   )
 }

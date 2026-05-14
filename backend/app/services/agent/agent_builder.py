@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import asyncio
 from typing import Any
 
 import structlog
@@ -124,13 +125,18 @@ async def run_agent(
             }
 
         contents.append(cand.content)
-        fr_parts: list[Part] = []
-        for fc in fcs:
-            name = fc.name
-            tools_used.append(name)
-            args = _fc_args(fc)
-            result = await agent_tools.dispatch_tool(mcp, user_id, name, args)
-            fr_parts.append(Part.from_function_response(name=name, response=result))
+        tool_calls = [(fc.name, _fc_args(fc)) for fc in fcs]
+        tools_used.extend(name for name, _args in tool_calls)
+        results = await asyncio.gather(
+            *[
+                agent_tools.dispatch_tool(mcp, user_id, name, args)
+                for name, args in tool_calls
+            ]
+        )
+        fr_parts = [
+            Part.from_function_response(name=name, response=result)
+            for (name, _args), result in zip(tool_calls, results, strict=True)
+        ]
         contents.append(Content(role="user", parts=fr_parts))
 
     return {

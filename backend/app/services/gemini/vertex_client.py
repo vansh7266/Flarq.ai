@@ -5,6 +5,7 @@ Flarq Vertex AI client — Google Cloud Vertex AI (not consumer Gemini API).
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import time
 from typing import Any
 
@@ -25,6 +26,7 @@ from app.core.config import get_settings
 logger = structlog.get_logger("vertex_ai")
 
 _initialized = False
+_gemini_executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
 
 
 def init_vertex() -> None:
@@ -128,7 +130,7 @@ class VertexAIClient:
         mime = "application/json" if json_mode else "text/plain"
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(
-            None,
+            _gemini_executor,
             lambda: _sync_generate_text(
                 prompt=prompt,
                 system_instruction=system_instruction,
@@ -174,7 +176,7 @@ class VertexAIClient:
             raise RuntimeError("Vertex tool generation failed") from last_err
 
         loop = asyncio.get_running_loop()
-        return await loop.run_in_executor(None, _call)
+        return await loop.run_in_executor(_gemini_executor, _call)
 
 
 def build_agent_tools() -> list[Tool]:

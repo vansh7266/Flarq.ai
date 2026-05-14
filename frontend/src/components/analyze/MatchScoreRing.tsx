@@ -3,10 +3,10 @@ interface MatchScoreRingProps {
 }
 
 function ringColor(score: number): string {
-  if (score >= 75) return '#10b981'
-  if (score >= 50) return '#f59e0b'
+  if (score >= 75) return '#0d9488'
+  if (score >= 50) return '#d97706'
   if (score >= 25) return '#f97316'
-  return '#ef4444'
+  return '#dc2626'
 }
 
 export function MatchScoreRing({ score }: MatchScoreRingProps) {
@@ -23,7 +23,7 @@ export function MatchScoreRing({ score }: MatchScoreRingProps) {
           cx="60"
           cy="60"
           r={radius}
-          stroke="#2a2a3a"
+          stroke="#e2e8f0"
           strokeWidth={stroke}
           fill="none"
         />

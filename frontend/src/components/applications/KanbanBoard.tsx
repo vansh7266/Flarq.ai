@@ -10,17 +10,17 @@ import { Card } from '../ui/Card'
 import type { JobApplication } from '../../types/application.types'
 
 const MAIN_COLUMNS: { id: string; title: string; border: string }[] = [
-  { id: 'saved', title: 'Saved', border: 'border-l-slate-400' },
-  { id: 'applied', title: 'Applied', border: 'border-l-sky-500' },
-  { id: 'phone_screen', title: 'Phone Screen', border: 'border-l-violet-500' },
-  { id: 'interview', title: 'Interview', border: 'border-l-indigo-500' },
-  { id: 'offer', title: 'Offer', border: 'border-l-emerald-500' },
+  { id: 'saved', title: 'Saved', border: 'border-t-slate-400' },
+  { id: 'applied', title: 'Applied', border: 'border-t-primary' },
+  { id: 'phone_screen', title: 'Phone Screen', border: 'border-t-accent' },
+  { id: 'interview', title: 'Interview', border: 'border-t-blue-500' },
+  { id: 'offer', title: 'Offer', border: 'border-t-emerald-500' },
 ]
 
 const OUTCOME_COLUMNS: { id: string; title: string; border: string }[] = [
-  { id: 'accepted', title: 'Accepted', border: 'border-l-emerald-600' },
-  { id: 'rejected', title: 'Rejected', border: 'border-l-rose-500' },
-  { id: 'ghosted', title: 'Ghosted', border: 'border-l-slate-500' },
+  { id: 'accepted', title: 'Accepted', border: 'border-t-green-600' },
+  { id: 'rejected', title: 'Rejected', border: 'border-t-red-500' },
+  { id: 'ghosted', title: 'Ghosted', border: 'border-t-gray-500' },
 ]
 
 interface KanbanBoardProps {
@@ -80,7 +80,7 @@ export function KanbanBoard({
           />
         ))}
 
-        <Card className="flex min-w-[720px] gap-2 border border-dashed border-border/70 bg-background/30 p-2">
+        <Card className="flex min-w-[720px] gap-2 border border-dashed border-border bg-surface p-2">
           <div className="flex w-24 shrink-0 flex-col justify-center">
             <p className="rotate-180 text-xs font-bold uppercase tracking-widest text-text-muted [writing-mode:vertical-rl]">
               Outcomes

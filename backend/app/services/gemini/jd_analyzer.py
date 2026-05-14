@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from app.services.gemini.client import generate_json_from_prompt
@@ -40,8 +41,27 @@ Return ONLY valid JSON:
 """.strip()
 
 
+INJECTION_PATTERNS = [
+    r"(?i)ignore previous instructions",
+    r"(?i)ignore all previous",
+    r"(?i)system prompt",
+    r"(?i)you are now",
+    r"(?i)disregard",
+    r"(?i)forget everything",
+    r"(?i)new instructions:",
+    r"(?i)override your",
+]
+
+
+def sanitize_jd(text: str) -> str:
+    for pattern in INJECTION_PATTERNS:
+        text = re.sub(pattern, "[REDACTED]", text)
+    return text[:10000]
+
+
 async def analyze_jd(jd_text: str) -> dict[str, Any]:
-    prompt = f"Job description:\n\n{jd_text}"
+    sanitized_text = sanitize_jd(jd_text)
+    prompt = f"Job description:\n\n{sanitized_text}"
     return await generate_json_from_prompt(
         system_instruction=JD_ANALYST_SYSTEM,
         user_prompt=prompt,

@@ -8,10 +8,10 @@ import type { ParsedResumeData, ParsedSkill, SkillCategory } from '../../types/p
 import { cn } from '../../utils/helpers'
 
 const categoryChip: Record<SkillCategory, string> = {
-  technical: 'bg-indigo-500/20 text-indigo-200 border-indigo-500/40',
-  soft: 'bg-violet-500/20 text-violet-200 border-violet-500/40',
-  tool: 'bg-slate-500/20 text-slate-200 border-slate-500/40',
-  language: 'bg-emerald-500/20 text-emerald-200 border-emerald-500/40',
+  technical: 'bg-primary-light text-primary border-primary/30',
+  soft: 'bg-accent-light text-accent border-accent/30',
+  tool: 'bg-slate-100 text-slate-700 border-slate-200',
+  language: 'bg-emerald-50 text-emerald-700 border-emerald-200',
 }
 
 interface ParsedResumeConfirmModalProps {
@@ -102,7 +102,7 @@ export function ParsedResumeConfirmModal({
           </div>
           <div className="mt-3 flex gap-2">
             <Input
-              placeholder="Add a skill"
+              aria-label="Add skill"
               value={newSkill}
               onChange={(event) => setNewSkill(event.target.value)}
               className="flex-1"
@@ -135,6 +135,7 @@ export function ParsedResumeConfirmModal({
         </div>
 
         <div className="flex flex-wrap gap-2 border-t border-border pt-4">
+          {isSubmitting ? <div className="shimmer-surface h-10 w-full animate-shimmer rounded-xl" /> : null}
           <Button
             type="button"
             className="flex-1"

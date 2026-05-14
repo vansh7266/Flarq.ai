@@ -18,7 +18,9 @@ import { PageWrapper } from '../components/layout/PageWrapper'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Spinner } from '../components/ui/Spinner'
+import { Skeleton } from '../components/ui/Skeleton'
 import { useAuth } from '../hooks/useAuth'
+import { usePageTitle } from '../hooks/usePageTitle'
 import * as analyticsService from '../services/analyticsService'
 import * as applicationService from '../services/applicationService'
 import type { AnalyticsOverview } from '../services/analyticsService'
@@ -54,10 +56,10 @@ function StatCard({ title, value, suffix = '' }: { title: string; value: number;
 function FunnelChart({ counts }: { counts: { applied: number; phone: number; interview: number; offer: number } }) {
   const max = Math.max(1, counts.applied, counts.phone, counts.interview, counts.offer)
   const stages = [
-    { label: 'Applied', v: counts.applied, color: '#6366f1' },
-    { label: 'Phone', v: counts.phone, color: '#8b5cf6' },
-    { label: 'Interview', v: counts.interview, color: '#22c55e' },
-    { label: 'Offer', v: counts.offer, color: '#f97316' },
+    { label: 'Applied', v: counts.applied, color: '#ccfbf1', text: '#0f766e' },
+    { label: 'Phone', v: counts.phone, color: '#99f6e4', text: '#0f766e' },
+    { label: 'Interview', v: counts.interview, color: '#2dd4bf', text: '#ffffff' },
+    { label: 'Offer', v: counts.offer, color: '#0d9488', text: '#ffffff' },
   ]
   return (
     <svg viewBox="0 0 360 200" className="h-48 w-full">
@@ -75,7 +77,7 @@ function FunnelChart({ counts }: { counts: { applied: number; phone: number; int
             <text x={24} y={y + 22} className="fill-text-primary text-[11px] font-semibold">
               {s.label}
             </text>
-            <text x={x + w - 8} y={y + 22} textAnchor="end" className="fill-white text-[11px] font-bold">
+            <text x={x + w - 8} y={y + 22} textAnchor="end" fill={s.text} className="text-[11px] font-bold">
               {s.v}
             </text>
           </g>
@@ -86,6 +88,7 @@ function FunnelChart({ counts }: { counts: { applied: number; phone: number; int
 }
 
 export function AnalyticsPage() {
+  usePageTitle('Analytics')
   const { isAuthenticated } = useAuth()
   const overview = useQuery({
     queryKey: ['analytics-overview'],
@@ -131,15 +134,21 @@ export function AnalyticsPage() {
     if (miss[0]) {
       b.push(`Most common missing skill across JDs: ${miss[0].name} (${miss[0].count} mentions).`)
     }
-    b.push('Keep linking applications to analyzed JDs so FLARQ can sharpen conversion insights.')
+    b.push('Keep linking applications to analyzed JDs so Flarq can sharpen conversion insights.')
     return b.slice(0, 3)
   }, [data])
 
   if (overview.isLoading) {
     return (
       <PageWrapper>
-        <div className="flex justify-center py-24">
-          <Spinner className="h-10 w-10" />
+        <div className="space-y-6">
+          <Skeleton className="h-20" />
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <Skeleton key={index} className="h-32" />
+            ))}
+          </div>
+          <Skeleton className="h-80" />
         </div>
       </PageWrapper>
     )
@@ -148,7 +157,10 @@ export function AnalyticsPage() {
   if (overview.isError || !data) {
     return (
       <PageWrapper>
-        <p className="text-danger">Could not load analytics.</p>
+        <Card className="border-danger/25 bg-red-50">
+          <p className="font-bold text-danger">Could not load analytics.</p>
+          <p className="mt-1 text-sm text-red-700">Refresh the page or try again after the API is reachable.</p>
+        </Card>
       </PageWrapper>
     )
   }
@@ -159,11 +171,19 @@ export function AnalyticsPage() {
     <PageWrapper>
       <div className="space-y-10">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-text-primary">Analytics</h1>
+          <h1 className="text-3xl font-extrabold text-text-primary sm:text-4xl">Your job search at a glance</h1>
           <p className="mt-2 max-w-2xl text-text-secondary">
-            FLARQ aggregates your applications, JDs, and outcomes — cached for speed, refreshed every hour.
+            Last 30 days · Updated just now
           </p>
         </div>
+
+        {stale.data && stale.data.length > 0 ? (
+          <Card className="border-primary/25 bg-primary-light/60 p-4">
+            <p className="text-sm font-semibold text-primary">
+              {stale.data.length} applications are ready for follow-up.
+            </p>
+          </Card>
+        ) : null}
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard title="Total applications" value={totals.applications} />
@@ -183,15 +203,15 @@ export function AnalyticsPage() {
                 <AreaChart data={chartData}>
                   <defs>
                     <linearGradient id="flFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#6366f1" stopOpacity={0.35} />
-                      <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
+                      <stop offset="0%" stopColor="#0d9488" stopOpacity={0.35} />
+                      <stop offset="100%" stopColor="#0d9488" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
                   <XAxis dataKey="week" tick={{ fontSize: 10 }} />
                   <YAxis allowDecimals={false} width={32} tick={{ fontSize: 10 }} />
                   <Tooltip labelFormatter={(l) => `Week ${l}`} />
-                  <Area type="monotone" dataKey="count" stroke="#4f46e5" fill="url(#flFill)" strokeWidth={2} />
+                  <Area type="monotone" dataKey="count" stroke="#0891b2" fill="url(#flFill)" strokeWidth={2} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -204,7 +224,7 @@ export function AnalyticsPage() {
         </div>
 
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-          <Card className="space-y-3 border-indigo-500/30 bg-indigo-500/5 p-5">
+          <Card className="space-y-3 border-l-[3px] border-l-primary p-5">
             <p className="text-sm font-semibold text-text-primary">Strategy insight</p>
             <p className="text-sm text-text-secondary">
               {(data.company_patterns as { top_insight?: string })?.top_insight}
@@ -230,7 +250,7 @@ export function AnalyticsPage() {
                   <Tooltip />
                   <Bar dataKey="count" radius={[0, 6, 6, 0]}>
                     {skillHave.map((_, i) => (
-                      <Cell key={i} fill="#4f46e5" />
+                      <Cell key={i} fill="#0d9488" />
                     ))}
                   </Bar>
                 </BarChart>

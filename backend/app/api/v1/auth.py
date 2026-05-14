@@ -15,6 +15,7 @@ from app.core.security import (
     hash_password,
     verify_password,
 )
+from app.services.auth.refresh_rotation import rotate_refresh_token
 from app.services.mongodb.repositories.user_repo import UserRepository
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -181,7 +182,8 @@ async def refresh_token(request: Request, payload: RefreshRequest, db: Database)
         )
 
     jti = token_payload.get("jti")
-    if not isinstance(jti, str):
+    exp = token_payload.get("exp")
+    if not isinstance(jti, str) or not isinstance(exp, (int, float)):
         return json_response(
             success=False,
             message="Malformed refresh token",
@@ -210,15 +212,12 @@ async def refresh_token(request: Request, payload: RefreshRequest, db: Database)
             status_code=status.HTTP_401_UNAUTHORIZED,
         )
 
-    access_token, expires_in = create_access_token(
-        subject=str(user_doc["_id"]),
-        email=user_doc["email"],
-    )
+    tokens = await rotate_refresh_token(db, token_payload, user_doc)
 
     return json_response(
         success=True,
         message="Token refreshed",
-        data={"access_token": access_token, "expires_in": expires_in},
+        data=tokens,
     )
 
 

@@ -19,7 +19,7 @@ async function refreshAccessToken(): Promise<string | null> {
     const response = await axios.post<{
       success: boolean
       message: string
-      data: { access_token: string; expires_in: number } | null
+      data: { access_token: string; refresh_token: string; expires_in: number } | null
       error: { code?: string } | null
     }>(`${API_BASE_URL}/api/v1/auth/refresh`, {
       refresh_token: refreshToken,
@@ -30,7 +30,9 @@ async function refreshAccessToken(): Promise<string | null> {
     }
 
     const accessToken = response.data.data.access_token
+    const nextRefreshToken = response.data.data.refresh_token
     useAuthStore.getState().setAccessToken(accessToken)
+    useAuthStore.getState().setRefreshToken(nextRefreshToken)
     return accessToken
   } catch {
     useAuthStore.getState().logout()

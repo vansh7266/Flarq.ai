@@ -1,4 +1,4 @@
-/** Types aligned with FLARQ backend / Gemini JSON (snake_case). */
+/** Types aligned with Flarq backend / Gemini JSON (snake_case). */
 
 export interface JdRequiredSkill {
   name: string

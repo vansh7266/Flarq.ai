@@ -14,6 +14,7 @@ interface AuthState {
   setHydrated: (value: boolean) => void
   setSession: (payload: { user: AuthUser; tokens: AuthTokens }) => void
   setAccessToken: (token: string) => void
+  setRefreshToken: (token: string) => void
   logout: () => void
 }
 
@@ -39,6 +40,10 @@ export const useAuthStore = create<AuthState>()(
       setAccessToken: (token) => {
         localStorage.setItem(ACCESS_TOKEN_KEY, token)
         set({ accessToken: token })
+      },
+      setRefreshToken: (token) => {
+        localStorage.setItem(REFRESH_TOKEN_KEY, token)
+        set({ refreshToken: token })
       },
       logout: () => {
         localStorage.removeItem(ACCESS_TOKEN_KEY)

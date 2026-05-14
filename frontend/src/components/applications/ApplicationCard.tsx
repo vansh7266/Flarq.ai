@@ -59,7 +59,7 @@ export function ApplicationCard({
       ? 'bg-slate-100 text-slate-600'
       : appliedDays <= 7
         ? 'bg-emerald-100 text-emerald-800'
-        : appliedDays <= 21
+        : appliedDays <= 14
           ? 'bg-amber-100 text-amber-900'
           : 'bg-rose-100 text-rose-900'
 
@@ -76,7 +76,7 @@ export function ApplicationCard({
       animate={{ opacity: 1, y: 0 }}
       className={clsx(isDragging && 'opacity-95')}
     >
-      <Card className="group relative flex gap-1 border-border/80 p-2 pr-3 transition-shadow hover:shadow-lg">
+      <Card className="group relative flex gap-1 rounded-xl border-border bg-white p-3 pr-4 transition-shadow hover:shadow-soft">
         <button
           type="button"
           className="mt-1 flex shrink-0 cursor-grab touch-none flex-col items-center rounded-md px-0.5 text-text-muted hover:bg-surface-elevated hover:text-text-primary active:cursor-grabbing"
@@ -96,14 +96,14 @@ export function ApplicationCard({
               title={`Priority: ${application.priority}`}
             />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-base font-semibold text-text-primary">
+              <p className="truncate text-base font-extrabold text-text-primary">
                 {application.companyName}
               </p>
               <p className="truncate text-sm text-text-secondary">{application.jobTitle}</p>
             </div>
             {typeof application.matchScore === 'number' ? (
               <div
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-indigo-200 bg-indigo-50 text-xs font-bold text-indigo-700"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-primary/25 bg-primary-light text-xs font-bold text-primary"
                 title="Match score"
               >
                 {Math.round(application.matchScore)}

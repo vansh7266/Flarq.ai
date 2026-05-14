@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
+import { Plus, RotateCcw, Search } from 'lucide-react'
 import { PageWrapper } from '../components/layout/PageWrapper'
 import { KanbanBoard } from '../components/applications/KanbanBoard'
 import { ApplicationsAddModal } from '../components/applications/ApplicationsAddModal'
@@ -12,10 +13,12 @@ import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Modal } from '../components/ui/Modal'
 import * as applicationService from '../services/applicationService'
+import { usePageTitle } from '../hooks/usePageTitle'
 import type { ApplicationStatus, ApplicationsResponse, JobApplication } from '../types/application.types'
 import { filterApplications, moveApplicationToStatus } from '../utils/applicationsKanban'
 
 export function ApplicationsPage() {
+  usePageTitle('Applications')
   const { isAuthenticated } = useAuth()
   const navigate = useNavigate()
   const qc = useQueryClient()
@@ -110,23 +113,27 @@ export function ApplicationsPage() {
       <div className="space-y-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-text-primary">Applications</h1>
+            <h1 className="text-3xl font-extrabold text-text-primary sm:text-4xl">Applications</h1>
             <p className="mt-2 max-w-2xl text-text-secondary">
-              FLARQ Kanban — drag cards across stages. Updates sync to MongoDB instantly.
+              Drag cards across stages and keep every opportunity moving.
             </p>
           </div>
-          <Button type="button" onClick={() => { setAddDefaultStatus('saved'); setAddOpen(true) }}>
-            Add application
+          <Button type="button" className="h-11" onClick={() => { setAddDefaultStatus('saved'); setAddOpen(true) }}>
+            <Plus className="h-4 w-4" />
+            Add Application
           </Button>
         </div>
 
-        <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface/40 p-4 lg:flex-row lg:items-center">
-          <Input
-            placeholder="Search company or role…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="lg:max-w-xs"
-          />
+        <div className="flex flex-col gap-3 rounded-2xl border border-border bg-white p-4 shadow-sm lg:flex-row lg:items-center">
+          <label className="relative lg:w-80">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+            <Input
+              aria-label="Search company or role"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </label>
           <div className="flex flex-wrap gap-2">
             <span className="text-xs font-medium text-text-muted">Priority</span>
             {(['all', 'high', 'medium', 'low'] as const).map((p) => (
@@ -135,7 +142,7 @@ export function ApplicationsPage() {
                 type="button"
                 onClick={() => setPriority(p)}
                 className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${
-                  priority === p ? 'bg-indigo-600 text-white' : 'bg-background text-text-secondary ring-1 ring-border'
+                  priority === p ? 'teal-cta text-white' : 'bg-surface text-text-secondary ring-1 ring-border'
                 }`}
               >
                 {p}
@@ -145,7 +152,7 @@ export function ApplicationsPage() {
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs font-medium text-text-muted">Sort</span>
             <select
-              className="rounded-lg border border-border bg-background px-2 py-1 text-sm text-text-primary"
+              className="rounded-xl border border-border bg-white px-3 py-2 text-sm text-text-primary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
               value={sort}
               onChange={(e) =>
                 setSort(e.target.value as 'last_updated' | 'applied_date' | 'match_score')
@@ -163,9 +170,19 @@ export function ApplicationsPage() {
             <Spinner />
           </div>
         ) : isError || !filtered ? (
-          <p className="text-sm text-danger">
-            Unable to load applications. Check that you are signed in and the API is running.
-          </p>
+          <div className="rounded-2xl border border-danger/25 bg-red-50 p-5 text-sm text-danger">
+            <p className="font-bold">Unable to load applications.</p>
+            <p className="mt-1 text-red-700">Check that you are signed in and the API is running.</p>
+            <Button
+              type="button"
+              variant="danger"
+              className="mt-4 h-10"
+              onClick={() => window.location.reload()}
+            >
+              <RotateCcw className="h-4 w-4" />
+              Retry
+            </Button>
+          </div>
         ) : (
           <KanbanBoard
             grouped={filtered.grouped}
@@ -232,10 +249,10 @@ export function ApplicationsPage() {
               {noteApp.companyName} — {noteApp.jobTitle}
             </p>
             <textarea
-              className="min-h-[100px] w-full rounded-lg border border-border bg-background p-3 text-sm text-text-primary"
+              className="min-h-[100px] w-full rounded-xl border border-border bg-white p-3 text-sm text-text-primary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
               value={noteText}
               onChange={(e) => setNoteText(e.target.value)}
-              placeholder="Interview feedback, recruiter name, next step…"
+              aria-label="Application note"
             />
             <div className="flex justify-end gap-2">
               <Button type="button" variant="ghost" onClick={() => setNoteOpen(false)}>
@@ -265,7 +282,7 @@ export function ApplicationsPage() {
             </p>
             <input
               type="datetime-local"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+              className="w-full rounded-xl border border-border bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
               value={interviewWhen}
               onChange={(e) => setInterviewWhen(e.target.value)}
               required

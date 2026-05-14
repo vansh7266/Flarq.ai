@@ -7,6 +7,7 @@ import './index.css'
 import App from './App.tsx'
 import { useAuthStore } from './store/authStore'
 import { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY } from './utils/constants'
+import { ErrorBoundary } from './components/ErrorBoundary'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -39,22 +40,36 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <Suspense
-          fallback={
-            <div className="flex min-h-screen items-center justify-center bg-background">
-              <div className="h-10 w-10 animate-spin rounded-full border-2 border-border border-t-primary" />
-            </div>
-          }
-        >
-          <App />
-        </Suspense>
+        <ErrorBoundary>
+          <Suspense
+            fallback={
+              <div className="flex min-h-screen items-center justify-center bg-background">
+                <div className="h-10 w-10 animate-spin rounded-full border-2 border-border border-t-primary" />
+              </div>
+            }
+          >
+            <App />
+          </Suspense>
+        </ErrorBoundary>
         <Toaster
           position="top-right"
           toastOptions={{
+            success: {
+              style: {
+                borderLeft: '4px solid #059669',
+              },
+            },
+            error: {
+              style: {
+                borderLeft: '4px solid #dc2626',
+              },
+            },
             style: {
-              background: '#1a1a24',
-              color: '#f1f5f9',
-              border: '1px solid #2a2a3a',
+              background: '#ffffff',
+              color: '#0f172a',
+              border: '1px solid #e2e8f0',
+              borderRadius: '0.75rem',
+              boxShadow: '0 18px 50px -28px rgba(15, 23, 42, 0.28)',
             },
           }}
         />

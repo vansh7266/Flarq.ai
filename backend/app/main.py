@@ -14,6 +14,7 @@ from app.core.limiter import limiter
 from app.core.middleware import RequestLoggingMiddleware, configure_structlog
 from app.services.gemini.vertex_client import init_vertex
 from app.services.mongodb.client import MongoClientManager, ensure_indexes
+from app.services.mongodb.mcp_client import mcp_client
 
 mongo_manager = MongoClientManager()
 
@@ -32,6 +33,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     await ensure_indexes(database)
     _app.state.db = database
     yield
+    await mcp_client.close()
     await mongo_manager.disconnect()
 
 
