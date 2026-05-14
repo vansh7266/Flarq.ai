@@ -17,7 +17,7 @@ const queryClient = new QueryClient({
   },
 })
 
-useAuthStore.persist.onFinishHydration(() => {
+useAuthStore.persist?.onFinishHydration?.(() => {
   const state = useAuthStore.getState()
   if (state.accessToken) {
     localStorage.setItem(ACCESS_TOKEN_KEY, state.accessToken)
@@ -27,6 +27,13 @@ useAuthStore.persist.onFinishHydration(() => {
   }
   state.setHydrated(true)
 })
+
+// Fallback for Zustand v5
+setTimeout(() => {
+  if (!useAuthStore.getState().isHydrated) {
+    useAuthStore.getState().setHydrated(true)
+  }
+}, 100)
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
