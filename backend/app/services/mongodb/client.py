@@ -35,6 +35,11 @@ async def ensure_indexes(database: AsyncIOMotorDatabase) -> None:
         unique=True,
         name="user_cache_key",
     )
+    await database["analytics_cache"].create_index(
+        "cached_at",
+        expireAfterSeconds=7200,
+        name="analytics_cache_ttl",
+    )
     await database["agent_conversations"].create_index(
         [("user_id", 1), ("updated_at", -1)],
         name="user_agent_conv_updated",
@@ -55,3 +60,8 @@ async def ensure_indexes(database: AsyncIOMotorDatabase) -> None:
 
     blocklist = database["token_blocklist"]
     await blocklist.create_index("jti", unique=True)
+    await blocklist.create_index(
+        "blocked_at",
+        expireAfterSeconds=691200,
+        name="token_blocklist_ttl",
+    )

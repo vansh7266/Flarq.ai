@@ -33,6 +33,49 @@ ALLOWED_COLLECTIONS = frozenset(
     }
 )
 
+ALLOWED_FILTER_OPERATORS = {
+    "$eq",
+    "$ne",
+    "$gt",
+    "$gte",
+    "$lt",
+    "$lte",
+    "$in",
+    "$nin",
+    "$and",
+    "$or",
+    "$not",
+    "$nor",
+    "$exists",
+    "$type",
+    "$regex",
+    "$options",
+    "$elemMatch",
+    "$size",
+    "$all",
+}
+
+BLOCKED_FILTER_OPERATORS = {"$where", "$function"}
+
+BLOCKED_PIPELINE_STAGES = {
+    "$out",
+    "$merge",
+    "$currentOp",
+    "$listSessions",
+    "$indexStats",
+    "$function",
+}
+
+USER_SCOPED_COLLECTIONS = frozenset(
+    {
+        "applications",
+        "profiles",
+        "cover_letters",
+        "job_descriptions",
+        "agent_conversations",
+    }
+)
+
 
 class MongoJSONEncoder(json.JSONEncoder):
     def default(self, obj: Any) -> Any:
@@ -60,6 +103,78 @@ def _maybe_object_id_filter(filter_dict: dict[str, Any]) -> dict[str, Any]:
         except Exception:
             pass
     return prepared
+
+
+def validate_filter(obj: Any, depth: int = 0) -> bool:
+    if depth > 10:
+        return False
+    if isinstance(obj, dict):
+        for key, value in obj.items():
+            if key in BLOCKED_FILTER_OPERATORS:
+                return False
+            if key.startswith("$") and key not in ALLOWED_FILTER_OPERATORS:
+                return False
+            if not validate_filter(value, depth + 1):
+                return False
+    elif isinstance(obj, list):
+        for item in obj:
+            if not validate_filter(item, depth + 1):
+                return False
+    return True
+
+
+def _has_user_id(obj: Any, depth: int = 0) -> bool:
+    if depth > 10:
+        return False
+    if isinstance(obj, dict):
+        if "user_id" in obj:
+            return True
+        return any(_has_user_id(value, depth + 1) for value in obj.values())
+    if isinstance(obj, list):
+        return any(_has_user_id(item, depth + 1) for item in obj)
+    return False
+
+
+def validate_pipeline(pipeline: list[Any]) -> tuple[bool, str]:
+    if len(pipeline) > 20:
+        return False, "Pipeline too complex (max 20 stages)"
+    for stage in pipeline:
+        if not isinstance(stage, dict):
+            return False, "Invalid pipeline stage"
+        for key, value in stage.items():
+            if key in BLOCKED_PIPELINE_STAGES:
+                return False, f"Stage {key} not allowed"
+            if key == "$match" and not validate_filter(value):
+                return False, "Invalid filter operator"
+    return True, ""
+
+
+def _requires_user_scope(collection_name: str) -> bool:
+    return collection_name in USER_SCOPED_COLLECTIONS
+
+
+def _validate_filter_scope(collection_name: str, filter_dict: dict[str, Any]) -> str | None:
+    if not validate_filter(filter_dict):
+        return "Invalid filter operator"
+    if _requires_user_scope(collection_name) and not _has_user_id(filter_dict):
+        return "user_id required for this collection"
+    return None
+
+
+def _validate_pipeline_scope(collection_name: str, pipeline: list[Any]) -> str | None:
+    ok, error = validate_pipeline(pipeline)
+    if not ok:
+        return error
+    if not _requires_user_scope(collection_name):
+        return None
+    first = pipeline[0] if pipeline else None
+    if not isinstance(first, dict) or "$match" not in first or not _has_user_id(first["$match"]):
+        return "user_id required for this collection"
+    return None
+
+
+def _error(text: str) -> list[types.TextContent]:
+    return [types.TextContent(type="text", text=json.dumps({"success": False, "error": text}))]
 
 
 def _merge_updated_at(update: dict[str, Any]) -> dict[str, Any]:
@@ -98,7 +213,7 @@ async def _list_tools() -> list[types.Tool]:
         ),
         types.Tool(
             name="mongodb_find_many",
-            description="Find multiple documents in a MongoDB collection",
+            description="Find multiple documents in a MongoDB collection. Callers MUST include user_id in filters for user-scoped collections.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -154,7 +269,7 @@ async def _list_tools() -> list[types.Tool]:
         ),
         types.Tool(
             name="mongodb_aggregate",
-            description="Run an aggregation pipeline on a MongoDB collection",
+            description="Run an aggregation pipeline on a MongoDB collection. Callers MUST include user_id in the first $match stage for user-scoped collections.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -183,7 +298,7 @@ async def _list_tools() -> list[types.Tool]:
         ),
         types.Tool(
             name="mongodb_count",
-            description="Count documents matching a filter",
+            description="Count documents matching a filter. Callers MUST include user_id in filters for user-scoped collections.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -240,11 +355,17 @@ async def _call_tool(name: str, arguments: dict[str, Any]) -> list[types.TextCon
 
         if name == "mongodb_find_one":
             filter_dict = _maybe_object_id_filter(dict(arguments["filter"]))
+            scope_error = _validate_filter_scope(collection_name, filter_dict)
+            if scope_error:
+                return _error(scope_error)
             doc = await collection.find_one(filter_dict)
             result = mongo_serialize(doc) if doc else None
 
         elif name == "mongodb_find_many":
             filter_dict = _maybe_object_id_filter(dict(arguments["filter"]))
+            scope_error = _validate_filter_scope(collection_name, filter_dict)
+            if scope_error:
+                return _error(scope_error)
             sort = arguments.get("sort")
             limit = int(arguments.get("limit", 50))
             cursor = collection.find(filter_dict)
@@ -269,6 +390,9 @@ async def _call_tool(name: str, arguments: dict[str, Any]) -> list[types.TextCon
 
         elif name == "mongodb_update_one":
             filter_dict = _maybe_object_id_filter(dict(arguments["filter"]))
+            scope_error = _validate_filter_scope(collection_name, filter_dict)
+            if scope_error:
+                return _error(scope_error)
             update = dict(arguments["update"])
             upsert = bool(arguments.get("upsert", False))
             update = _merge_updated_at(update)
@@ -277,6 +401,9 @@ async def _call_tool(name: str, arguments: dict[str, Any]) -> list[types.TextCon
 
         elif name == "mongodb_delete_one":
             filter_dict = _maybe_object_id_filter(dict(arguments["filter"]))
+            scope_error = _validate_filter_scope(collection_name, filter_dict)
+            if scope_error:
+                return _error(scope_error)
             res = await collection.update_one(
                 filter_dict,
                 {
@@ -291,18 +418,9 @@ async def _call_tool(name: str, arguments: dict[str, Any]) -> list[types.TextCon
 
         elif name == "mongodb_aggregate":
             pipeline = list(arguments["pipeline"])
-            if len(pipeline) > 20:
-                return [
-                    types.TextContent(
-                        type="text",
-                        text=json.dumps(
-                            {
-                                "success": False,
-                                "error": "Pipeline too complex (max 20 stages)",
-                            }
-                        ),
-                    )
-                ]
+            scope_error = _validate_pipeline_scope(collection_name, pipeline)
+            if scope_error:
+                return _error(scope_error)
             max_results = int(arguments.get("max_results", 10000))
             docs = await collection.aggregate(pipeline).to_list(length=max_results)
             result = mongo_serialize(docs)
@@ -329,7 +447,11 @@ async def _call_tool(name: str, arguments: dict[str, Any]) -> list[types.TextCon
                 }
 
         elif name == "mongodb_count":
-            count = await collection.count_documents(dict(arguments["filter"]))
+            filter_dict = _maybe_object_id_filter(dict(arguments["filter"]))
+            scope_error = _validate_filter_scope(collection_name, filter_dict)
+            if scope_error:
+                return _error(scope_error)
+            count = await collection.count_documents(filter_dict)
             result = {"count": count}
 
         elif name == "mongodb_vector_search":

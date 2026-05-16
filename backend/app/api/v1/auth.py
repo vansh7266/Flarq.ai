@@ -79,7 +79,7 @@ async def _is_blocklisted(db, jti: str) -> bool:
 async def _blocklist(db, jti: str, expires_at: datetime) -> None:
     await db["token_blocklist"].update_one(
         {"jti": jti},
-        {"$setOnInsert": {"jti": jti, "expires_at": expires_at}},
+        {"$setOnInsert": {"jti": jti, "expires_at": expires_at, "blocked_at": datetime.now(tz=UTC)}},
         upsert=True,
     )
 

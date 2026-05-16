@@ -3,11 +3,13 @@ import { useMutation } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { Check, Copy, RefreshCw, Save, X as XIcon } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
 import { PageWrapper } from '../components/layout/PageWrapper'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
-import { Spinner } from '../components/ui/Spinner'
+import { FlarqOrb } from '../components/ui/FlarqOrb'
+import { GlowCard } from '../components/ui/GlowCard'
 import { MatchScoreRing } from '../components/analyze/MatchScoreRing'
 import { AddApplicationModal } from '../components/analyze/AddApplicationModal'
 import { useAuth } from '../hooks/useAuth'
@@ -137,9 +139,9 @@ export function AnalyzePage() {
   return (
     <PageWrapper>
       <div className="grid gap-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-        <Card className="h-fit space-y-5">
+        <GlowCard contentClassName="h-fit space-y-5 p-6">
           <div>
-            <h1 className="text-3xl font-extrabold text-text-primary sm:text-4xl">
+            <h1 className="font-display text-3xl font-bold text-gradient sm:text-4xl">
               Paste a job description
             </h1>
             <p className="mt-2 text-text-secondary">
@@ -148,10 +150,11 @@ export function AnalyzePage() {
           </div>
 
           <label className="flex flex-col gap-2">
-            <span className="text-sm font-semibold text-text-primary">Paste a job description</span>
+            <span className="font-display text-base font-semibold text-text">Paste a job description</span>
             <textarea
-              className="min-h-72 w-full rounded-xl border border-primary/20 bg-white px-4 py-3 text-sm leading-6 text-text-primary outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/30"
+              className="min-h-72 w-full resize-none rounded-xl border-0 border-b-2 border-border bg-surface px-4 py-3 text-sm leading-6 text-text outline-none transition placeholder:text-muted focus:border-primary"
               aria-label="Job description text"
+              placeholder="Paste the role description, responsibilities, and requirements here..."
               value={jdText}
               maxLength={maxChars}
               onChange={(e) => setJdText(e.target.value)}
@@ -170,31 +173,32 @@ export function AnalyzePage() {
             <p className="mb-2 text-sm font-semibold text-text-primary">Tone</p>
             <div className="flex flex-wrap gap-2">
               {tones.map((item) => (
-                <button
+                <Button
                   key={item}
                   type="button"
                   onClick={() => setTone(item)}
-                  className={`rounded-full border px-4 py-2 text-sm font-semibold capitalize transition ${
+                  variant="secondary"
+                  className={`rounded-full px-4 py-2 text-sm font-semibold capitalize transition ${
                     tone === item
-                      ? 'teal-cta border-transparent text-white shadow-glow'
-                      : 'border-border bg-white text-text-secondary hover:border-primary hover:text-primary'
+                      ? 'grad-neural border-transparent text-white shadow-glow'
+                      : 'border-border bg-card text-muted hover:border-primary hover:text-primary'
                   }`}
                 >
                   {item}
-                </button>
+                </Button>
               ))}
             </div>
           </div>
 
           <Button
             type="button"
-            className="h-[52px] w-full"
+            className="h-[52px] w-full grad-sunset text-void hover:glow-amber"
             disabled={charCount < minChars || analyzeMutation.isPending}
             onClick={() => void analyzeMutation.mutateAsync()}
           >
             {analyzeMutation.isPending ? (
               <>
-                <Spinner className="h-4 w-4 border-white/30 border-t-white" />
+                <FlarqOrb size={24} state="thinking" />
                 <motion.span
                   key={LOADING_MESSAGES[loadingIndex]}
                   initial={{ opacity: 0, y: 4 }}
@@ -207,15 +211,13 @@ export function AnalyzePage() {
               'Analyze with Flarq'
             )}
           </Button>
-        </Card>
+        </GlowCard>
 
         <div>
           {!result ? (
             <Card className="flex min-h-[560px] items-center justify-center border-dashed text-center">
               <div>
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-light text-primary">
-                  <Check className="h-7 w-7" />
-                </div>
+                <FlarqOrb size={72} className="mx-auto" />
                 <p className="mt-4 text-sm font-semibold text-text-secondary">
                   Your match score, skill breakdown, cover letter, and strategy will appear here.
                 </p>
@@ -229,18 +231,18 @@ export function AnalyzePage() {
               className="space-y-5"
             >
               <motion.div variants={fadeUp}>
-                <Card className="text-center">
+                <GlowCard contentClassName="p-6 text-center">
                   <MatchScoreRing score={score} />
                   <div className={`text-3xl font-extrabold ${matchColor}`}>{score}%</div>
                   <Badge variant="outline" className="mx-auto mt-3 border-primary/30 text-primary">
                     {scoreBadge(score)}
                   </Badge>
-                </Card>
+                </GlowCard>
               </motion.div>
 
               <motion.div variants={fadeUp}>
-                <Card>
-                  <h2 className="text-lg font-extrabold text-text-primary">Skills Breakdown</h2>
+                <GlowCard contentClassName="p-6">
+                  <h2 className="font-display text-lg font-semibold text-text">Skills Breakdown</h2>
                   <div className="mt-4 grid gap-4 md:grid-cols-2">
                     <div>
                       <p className="mb-2 text-sm font-bold text-success">You have</p>
@@ -251,7 +253,7 @@ export function AnalyzePage() {
                             initial={{ opacity: 0, y: 6 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: index * 0.04 }}
-                            className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-success"
+                            className="inline-flex items-center gap-1 rounded-full border border-emerald/30 bg-emerald/10 px-3 py-1 text-xs font-semibold text-emerald"
                           >
                             <Check className="h-3 w-3" />
                             {skill.skill}
@@ -270,8 +272,8 @@ export function AnalyzePage() {
                             transition={{ delay: index * 0.04 }}
                             className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold ${
                               skill.importance === 'must-have'
-                                ? 'bg-red-50 text-danger'
-                                : 'bg-amber-50 text-warning'
+                                ? 'border border-rose/30 bg-rose/10 text-rose'
+                                : 'border border-amber/30 bg-amber/10 text-amber'
                             }`}
                           >
                             <XIcon className="h-3 w-3" />
@@ -281,24 +283,22 @@ export function AnalyzePage() {
                       </div>
                     </div>
                   </div>
-                </Card>
+                </GlowCard>
               </motion.div>
 
               <motion.div variants={fadeUp}>
-                <Card className="relative border-l-[3px] border-l-primary bg-white">
+                <GlowCard contentClassName="relative border-l-[3px] border-l-primary p-6">
                   <p className="text-xs font-semibold uppercase tracking-wide text-text-muted">
                     Subject line
                   </p>
-                  <h2 className="mt-1 text-base font-extrabold text-text-primary">
+                  <h2 className="mt-1 font-display text-base font-semibold text-text">
                     {result.cover_letter.subject_line}
                   </h2>
-                  <div className="mt-4 space-y-4 text-sm leading-7 text-text-primary">
-                    {result.cover_letter.body.split(/\n\n+/).map((para) => (
-                      <p key={para}>{para}</p>
-                    ))}
+                  <div className="prose prose-invert mt-4 max-w-none text-sm leading-7 text-text">
+                    <ReactMarkdown>{result.cover_letter.body}</ReactMarkdown>
                   </div>
                   <div className="mt-5 flex flex-wrap items-center gap-2 pr-28">
-                    <Button type="button" variant="secondary" onClick={() => void handleCopy()}>
+                    <Button type="button" className="grad-sunset text-void" onClick={() => void handleCopy()}>
                       {copyFlash ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                       {copyFlash ? 'Copied' : 'Copy'}
                     </Button>
@@ -318,14 +318,14 @@ export function AnalyzePage() {
                       Regenerate
                     </Button>
                   </div>
-                  <span className="absolute bottom-6 right-6 rounded-full bg-surface px-3 py-1 text-xs font-semibold text-text-muted">
+                  <span className="absolute bottom-6 right-6 rounded-full bg-surface px-3 py-1 text-xs font-semibold text-muted">
                     {result.cover_letter.word_count} words
                   </span>
-                </Card>
+                </GlowCard>
               </motion.div>
 
               <motion.div variants={fadeUp}>
-                <Card className="border-l-[3px] border-l-primary bg-[#f0fdfa]">
+                <GlowCard gradient="linear-gradient(135deg, #34d399, #38bdf8)" contentClassName="border-l-[3px] border-l-emerald p-6">
                   <p className="text-sm italic leading-7 text-text-secondary">
                     {result.gap_analysis.recommendation}
                   </p>
@@ -337,7 +337,7 @@ export function AnalyzePage() {
                       </li>
                     ))}
                   </ul>
-                </Card>
+                </GlowCard>
               </motion.div>
             </motion.div>
           )}

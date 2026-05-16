@@ -3,10 +3,10 @@ interface MatchScoreRingProps {
 }
 
 function ringColor(score: number): string {
-  if (score >= 75) return '#0d9488'
-  if (score >= 50) return '#d97706'
-  if (score >= 25) return '#f97316'
-  return '#dc2626'
+  if (score >= 80) return '#34d399'
+  if (score >= 60) return '#7c5cfc'
+  if (score >= 40) return '#f5a623'
+  return '#ef4444'
 }
 
 export function MatchScoreRing({ score }: MatchScoreRingProps) {
@@ -23,7 +23,7 @@ export function MatchScoreRing({ score }: MatchScoreRingProps) {
           cx="60"
           cy="60"
           r={radius}
-          stroke="#e2e8f0"
+          stroke="#1e2030"
           strokeWidth={stroke}
           fill="none"
         />
@@ -40,8 +40,8 @@ export function MatchScoreRing({ score }: MatchScoreRingProps) {
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-3xl font-bold text-text-primary">{clamped}</span>
-        <span className="text-xs uppercase tracking-wide text-text-muted">match</span>
+        <span className="font-display text-3xl font-bold text-text">{clamped}</span>
+        <span className="font-mono text-xs uppercase tracking-wide text-muted">match</span>
       </div>
     </div>
   )

@@ -6,6 +6,7 @@ import json
 from typing import Any
 
 from app.services.gemini.client import generate_json_from_prompt
+from app.utils.sanitize import sanitize_value
 
 GAP_SYSTEM = """
 You are Flarq's intelligent gap analysis engine. Compare the candidate profile against the job requirements.
@@ -38,6 +39,8 @@ match_score must be an integer from 0 to 100 inclusive.
 
 
 async def analyze_gap(profile: dict[str, Any], jd_analysis: dict[str, Any]) -> dict[str, Any]:
+    profile = sanitize_value(profile, 10000)
+    jd_analysis = sanitize_value(jd_analysis, 10000)
     user_prompt = (
         "Candidate profile JSON:\n"
         f"{json.dumps(profile, ensure_ascii=False)}\n\n"

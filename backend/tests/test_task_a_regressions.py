@@ -227,3 +227,119 @@ def test_vertex_client_defines_dedicated_executor() -> None:
     from app.services.gemini import vertex_client
 
     assert hasattr(vertex_client, "_gemini_executor")
+
+
+@pytest.mark.asyncio
+async def test_mcp_rejects_unknown_filter_operator(monkeypatch: pytest.MonkeyPatch) -> None:
+    from mcp_server import flarq_mongo_mcp as server_module
+
+    class ExplodingCollection:
+        async def find_one(self, _filter):  # noqa: ANN001
+            raise AssertionError("unsafe filter should not reach MongoDB")
+
+    class FakeDB:
+        def __getitem__(self, _name: str):
+            return ExplodingCollection()
+
+    monkeypatch.setattr(server_module, "_mongo_db", FakeDB())
+
+    response = await server_module._call_tool(
+        "mongodb_find_one",
+        {"collection": "users", "filter": {"email": {"$where": "sleep(1)"}}},
+    )
+
+    payload = json.loads(response[0].text)
+    assert payload == {"success": False, "error": "Invalid filter operator"}
+
+
+@pytest.mark.asyncio
+async def test_mcp_requires_user_id_for_scoped_find_many(monkeypatch: pytest.MonkeyPatch) -> None:
+    from mcp_server import flarq_mongo_mcp as server_module
+
+    class ExplodingCollection:
+        def find(self, _filter):  # noqa: ANN001
+            raise AssertionError("unscoped query should not reach MongoDB")
+
+    class FakeDB:
+        def __getitem__(self, _name: str):
+            return ExplodingCollection()
+
+    monkeypatch.setattr(server_module, "_mongo_db", FakeDB())
+
+    response = await server_module._call_tool(
+        "mongodb_find_many",
+        {"collection": "applications", "filter": {"status": "applied"}},
+    )
+
+    payload = json.loads(response[0].text)
+    assert payload == {"success": False, "error": "user_id required for this collection"}
+
+
+@pytest.mark.asyncio
+async def test_mcp_rejects_blocked_aggregate_stage(monkeypatch: pytest.MonkeyPatch) -> None:
+    from mcp_server import flarq_mongo_mcp as server_module
+
+    class ExplodingCollection:
+        def aggregate(self, _pipeline):  # noqa: ANN001
+            raise AssertionError("blocked pipeline should not reach MongoDB")
+
+    class FakeDB:
+        def __getitem__(self, _name: str):
+            return ExplodingCollection()
+
+    monkeypatch.setattr(server_module, "_mongo_db", FakeDB())
+
+    response = await server_module._call_tool(
+        "mongodb_aggregate",
+        {
+            "collection": "users",
+            "pipeline": [{"$match": {}}, {"$out": "leak"}],
+        },
+    )
+
+    payload = json.loads(response[0].text)
+    assert payload == {"success": False, "error": "Stage $out not allowed"}
+
+
+@pytest.mark.asyncio
+async def test_mcp_requires_user_id_in_first_match_for_scoped_aggregate(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from mcp_server import flarq_mongo_mcp as server_module
+
+    class ExplodingCollection:
+        def aggregate(self, _pipeline):  # noqa: ANN001
+            raise AssertionError("unscoped aggregate should not reach MongoDB")
+
+    class FakeDB:
+        def __getitem__(self, _name: str):
+            return ExplodingCollection()
+
+    monkeypatch.setattr(server_module, "_mongo_db", FakeDB())
+
+    response = await server_module._call_tool(
+        "mongodb_aggregate",
+        {"collection": "applications", "pipeline": [{"$match": {"status": "applied"}}]},
+    )
+
+    payload = json.loads(response[0].text)
+    assert payload == {"success": False, "error": "user_id required for this collection"}
+
+
+@pytest.mark.asyncio
+async def test_agent_application_search_escapes_regex(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.services.agent import agent_tools
+
+    captured: dict[str, object] = {}
+
+    class FakeMCP:
+        async def find_many(self, collection, filter_query, *, sort=None, limit=100):  # noqa: ANN001
+            captured["collection"] = collection
+            captured["filter"] = filter_query
+            return []
+
+    await agent_tools.search_applications(FakeMCP(), "user-1", company="Acme.*")
+
+    query = captured["filter"]
+    regex = query["$and"][2]["$or"][0]["company_name"]["$regex"]
+    assert regex == r"Acme\.\*"

@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import re
 from typing import Any
 
 from app.services.gemini.client import generate_json_from_prompt
+from app.utils.sanitize import sanitize_input
 
 JD_ANALYST_SYSTEM = """
 You are a job description analyst for Flarq. Extract structured requirements from this job description.
@@ -41,22 +41,8 @@ Return ONLY valid JSON:
 """.strip()
 
 
-INJECTION_PATTERNS = [
-    r"(?i)ignore previous instructions",
-    r"(?i)ignore all previous",
-    r"(?i)system prompt",
-    r"(?i)you are now",
-    r"(?i)disregard",
-    r"(?i)forget everything",
-    r"(?i)new instructions:",
-    r"(?i)override your",
-]
-
-
 def sanitize_jd(text: str) -> str:
-    for pattern in INJECTION_PATTERNS:
-        text = re.sub(pattern, "[REDACTED]", text)
-    return text[:10000]
+    return sanitize_input(text, 10000)
 
 
 async def analyze_jd(jd_text: str) -> dict[str, Any]:

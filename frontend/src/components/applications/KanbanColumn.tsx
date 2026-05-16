@@ -42,7 +42,7 @@ export function KanbanColumn({
       >
       <div className="mb-3 flex items-center justify-between gap-2">
         <p className="text-sm font-semibold text-text-primary">{title}</p>
-        <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-text-muted">
+        <span className="rounded-full bg-card px-2 py-0.5 text-xs font-medium text-muted">
           {applications.length}
         </span>
       </div>
@@ -65,7 +65,7 @@ export function KanbanColumn({
         ))}
       </div>
       {applications.length === 0 ? (
-        <div className="flex min-h-28 flex-col items-center justify-center rounded-xl border border-dashed border-border bg-white text-center text-xs text-text-muted">
+        <div className="flex min-h-28 flex-col items-center justify-center rounded-xl border border-dashed border-primary/40 bg-card text-center text-xs text-muted">
           Drop cards here
         </div>
       ) : null}

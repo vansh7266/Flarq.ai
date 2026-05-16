@@ -1,10 +1,6 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import type { AuthUser, AuthTokens } from '../types/auth.types'
-import {
-  ACCESS_TOKEN_KEY,
-  REFRESH_TOKEN_KEY,
-} from '../utils/constants'
 
 interface AuthState {
   user: AuthUser | null
@@ -29,8 +25,6 @@ export const useAuthStore = create<AuthState>()(
         set({ isHydrated: value })
       },
       setSession: ({ user, tokens }) => {
-        localStorage.setItem(ACCESS_TOKEN_KEY, tokens.accessToken)
-        localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refreshToken)
         set({
           user,
           accessToken: tokens.accessToken,
@@ -38,16 +32,12 @@ export const useAuthStore = create<AuthState>()(
         })
       },
       setAccessToken: (token) => {
-        localStorage.setItem(ACCESS_TOKEN_KEY, token)
         set({ accessToken: token })
       },
       setRefreshToken: (token) => {
-        localStorage.setItem(REFRESH_TOKEN_KEY, token)
         set({ refreshToken: token })
       },
       logout: () => {
-        localStorage.removeItem(ACCESS_TOKEN_KEY)
-        localStorage.removeItem(REFRESH_TOKEN_KEY)
         set({
           user: null,
           accessToken: null,

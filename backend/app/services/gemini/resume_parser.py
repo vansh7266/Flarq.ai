@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from app.services.gemini.client import generate_json_from_prompt
+from app.utils.sanitize import sanitize_input
 
 RESUME_PARSER_SYSTEM = """
 You are an expert resume parser for Flarq, an AI job search agent. Extract structured data from the resume text provided.
@@ -49,6 +50,7 @@ Return nothing except the JSON object.
 
 
 async def parse_resume(raw_text: str) -> dict[str, Any]:
+    raw_text = sanitize_input(raw_text, 50000)
     prompt = f"Resume text:\n\n{raw_text}"
     return await generate_json_from_prompt(
         system_instruction=RESUME_PARSER_SYSTEM,

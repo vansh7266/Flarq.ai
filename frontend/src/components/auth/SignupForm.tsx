@@ -17,6 +17,7 @@ export function SignupForm({ onSubmit, isSubmitting }: SignupFormProps) {
     register,
     handleSubmit,
     formState: { errors },
+    watch,
   } = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
     defaultValues: {
@@ -26,6 +27,15 @@ export function SignupForm({ onSubmit, isSubmitting }: SignupFormProps) {
       fullName: '',
     },
   })
+  const password = watch('password')
+  const strength =
+    password.length >= 12 && /[A-Z]/.test(password) && /\d/.test(password)
+      ? 3
+      : password.length >= 8
+        ? 2
+        : password.length > 0
+          ? 1
+          : 0
 
   return (
     <form
@@ -70,6 +80,22 @@ export function SignupForm({ onSubmit, isSubmitting }: SignupFormProps) {
         >
           {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
         </button>
+        <div className="mt-2 grid grid-cols-3 gap-1">
+          {[1, 2, 3].map((segment) => (
+            <span
+              key={segment}
+              className={`h-1 rounded-full ${
+                strength >= segment
+                  ? segment === 1
+                    ? 'bg-rose'
+                    : segment === 2
+                      ? 'bg-amber'
+                      : 'bg-emerald'
+                  : 'bg-border'
+              }`}
+            />
+          ))}
+        </div>
       </div>
       <Input
         label="Confirm password"
@@ -80,6 +106,9 @@ export function SignupForm({ onSubmit, isSubmitting }: SignupFormProps) {
       />
       <Button type="submit" className="h-12 w-full" isLoading={isSubmitting}>
         Create account
+      </Button>
+      <Button type="button" variant="secondary" className="h-12 w-full">
+        Continue with Google
       </Button>
     </form>
   )

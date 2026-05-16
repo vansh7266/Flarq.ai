@@ -7,6 +7,7 @@ from __future__ import annotations
 import asyncio
 import concurrent.futures
 import time
+from functools import lru_cache
 from typing import Any
 
 import structlog
@@ -27,6 +28,25 @@ logger = structlog.get_logger("vertex_ai")
 
 _initialized = False
 _gemini_executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
+
+
+@lru_cache(maxsize=20)
+def _get_model(
+    model_name: str,
+    system_instruction: str | None,
+    json_mode: bool,
+    temperature: float,
+    max_output_tokens: int,
+) -> GenerativeModel:
+    return GenerativeModel(
+        model_name=model_name,
+        system_instruction=system_instruction,
+        generation_config=GenerationConfig(
+            temperature=temperature,
+            max_output_tokens=max_output_tokens,
+            response_mime_type="application/json" if json_mode else "text/plain",
+        ),
+    )
 
 
 def init_vertex() -> None:
@@ -82,20 +102,17 @@ def _sync_generate_text(
     _ensure_init()
     settings = get_settings()
     model_name = settings.vertex_ai_model
-    gen_kwargs: dict[str, Any] = {
-        "temperature": temperature,
-        "max_output_tokens": max_output_tokens,
-    }
-    if response_mime_type:
-        gen_kwargs["response_mime_type"] = response_mime_type
+    json_mode = response_mime_type == "application/json"
 
     last_err: BaseException | None = None
     for attempt in range(3):
         try:
-            model = GenerativeModel(
-                model_name=model_name,
-                system_instruction=system_instruction,
-                generation_config=GenerationConfig(**gen_kwargs),
+            model = _get_model(
+                model_name,
+                system_instruction,
+                json_mode,
+                temperature,
+                max_output_tokens,
             )
             response = model.generate_content(prompt)
             text = (getattr(response, "text", None) or "").strip()

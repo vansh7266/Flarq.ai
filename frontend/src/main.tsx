@@ -6,7 +6,6 @@ import { Toaster } from 'react-hot-toast'
 import './index.css'
 import App from './App.tsx'
 import { useAuthStore } from './store/authStore'
-import { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY } from './utils/constants'
 import { ErrorBoundary } from './components/ErrorBoundary'
 
 const queryClient = new QueryClient({
@@ -20,12 +19,6 @@ const queryClient = new QueryClient({
 
 useAuthStore.persist?.onFinishHydration?.(() => {
   const state = useAuthStore.getState()
-  if (state.accessToken) {
-    localStorage.setItem(ACCESS_TOKEN_KEY, state.accessToken)
-  }
-  if (state.refreshToken) {
-    localStorage.setItem(REFRESH_TOKEN_KEY, state.refreshToken)
-  }
   state.setHydrated(true)
 })
 

@@ -43,7 +43,7 @@ function useCountUp(target: number, duration = 900) {
 function StatCard({ title, value, suffix = '' }: { title: string; value: number; suffix?: string }) {
   const display = useCountUp(value)
   return (
-    <Card className="space-y-1 p-4">
+    <Card className="gradient-border space-y-1 p-4">
       <p className="text-xs font-medium uppercase tracking-wide text-text-muted">{title}</p>
       <p className="text-3xl font-bold text-text-primary">
         {display}
@@ -56,34 +56,33 @@ function StatCard({ title, value, suffix = '' }: { title: string; value: number;
 function FunnelChart({ counts }: { counts: { applied: number; phone: number; interview: number; offer: number } }) {
   const max = Math.max(1, counts.applied, counts.phone, counts.interview, counts.offer)
   const stages = [
-    { label: 'Applied', v: counts.applied, color: '#ccfbf1', text: '#0f766e' },
-    { label: 'Phone', v: counts.phone, color: '#99f6e4', text: '#0f766e' },
-    { label: 'Interview', v: counts.interview, color: '#2dd4bf', text: '#ffffff' },
-    { label: 'Offer', v: counts.offer, color: '#0d9488', text: '#ffffff' },
+    { label: 'Applied', v: counts.applied, gradient: 'grad-neural' },
+    { label: 'Phone', v: counts.phone, gradient: 'grad-horizon' },
+    { label: 'Interview', v: counts.interview, gradient: 'grad-sunset' },
+    { label: 'Offer', v: counts.offer, gradient: 'grad-aurora' },
   ]
   return (
-    <svg viewBox="0 0 360 200" className="h-48 w-full">
-      {stages.map((s, i) => {
-        const w = 60 + (s.v / max) * 220
-        const x = 180 - w / 2
-        const y = 12 + i * 46
+    <div className="space-y-4">
+      {stages.map((stage) => {
+        const width = Math.max(8, (stage.v / max) * 100)
         return (
-          <g key={s.label}>
-            <polygon
-              points={`${x},${y} ${x + w},${y} ${x + w - 18},${y + 34} ${x + 18},${y + 34}`}
-              fill={s.color}
-              opacity={0.85}
-            />
-            <text x={24} y={y + 22} className="fill-text-primary text-[11px] font-semibold">
-              {s.label}
-            </text>
-            <text x={x + w - 8} y={y + 22} textAnchor="end" fill={s.text} className="text-[11px] font-bold">
-              {s.v}
-            </text>
-          </g>
+          <div key={stage.label}>
+            <div className="mb-1 flex items-center justify-between text-xs text-muted">
+              <span>{stage.label}</span>
+              <span>{stage.v}</span>
+            </div>
+            <div className="h-10 overflow-hidden rounded-full bg-surface">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${width}%` }}
+                transition={{ duration: 0.7, ease: 'easeOut' }}
+                className={`h-full rounded-full ${stage.gradient}`}
+              />
+            </div>
+          </div>
         )
       })}
-    </svg>
+    </div>
   )
 }
 
@@ -171,10 +170,17 @@ export function AnalyticsPage() {
     <PageWrapper>
       <div className="space-y-10">
         <div>
-          <h1 className="text-3xl font-extrabold text-text-primary sm:text-4xl">Your job search at a glance</h1>
-          <p className="mt-2 max-w-2xl text-text-secondary">
-            Last 30 days · Updated just now
-          </p>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h1 className="font-display text-3xl font-bold text-gradient sm:text-4xl">
+                Your job search at a glance
+              </h1>
+              <p className="mt-2 max-w-2xl text-text-secondary">Data from your applications</p>
+            </div>
+            <select className="rounded-xl border border-border bg-card px-3 py-2 text-sm text-text">
+              <option>Last 30 days</option>
+            </select>
+          </div>
         </div>
 
         {stale.data && stale.data.length > 0 ? (
@@ -203,15 +209,15 @@ export function AnalyticsPage() {
                 <AreaChart data={chartData}>
                   <defs>
                     <linearGradient id="flFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#0d9488" stopOpacity={0.35} />
-                      <stop offset="100%" stopColor="#0d9488" stopOpacity={0} />
+                      <stop offset="0%" stopColor="#7c5cfc" stopOpacity={0.28} />
+                      <stop offset="100%" stopColor="#7c5cfc" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
                   <XAxis dataKey="week" tick={{ fontSize: 10 }} />
                   <YAxis allowDecimals={false} width={32} tick={{ fontSize: 10 }} />
                   <Tooltip labelFormatter={(l) => `Week ${l}`} />
-                  <Area type="monotone" dataKey="count" stroke="#0891b2" fill="url(#flFill)" strokeWidth={2} />
+                  <Area type="monotone" dataKey="count" stroke="#38bdf8" fill="url(#flFill)" strokeWidth={2} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -250,7 +256,7 @@ export function AnalyticsPage() {
                   <Tooltip />
                   <Bar dataKey="count" radius={[0, 6, 6, 0]}>
                     {skillHave.map((_, i) => (
-                      <Cell key={i} fill="#0d9488" />
+                      <Cell key={i} fill="#34d399" />
                     ))}
                   </Bar>
                 </BarChart>
@@ -268,7 +274,7 @@ export function AnalyticsPage() {
                   <Tooltip />
                   <Bar dataKey="count" radius={[0, 6, 6, 0]}>
                     {skillMiss.map((_, i) => (
-                      <Cell key={i} fill="#f97316" />
+                      <Cell key={i} fill="#f472b6" />
                     ))}
                   </Bar>
                 </BarChart>

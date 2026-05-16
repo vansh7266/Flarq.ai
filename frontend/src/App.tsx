@@ -8,13 +8,14 @@ import { AnalyzePage } from './pages/AnalyzePage'
 import { ApplicationsPage } from './pages/ApplicationsPage'
 import { AnalyticsPage } from './pages/AnalyticsPage'
 import { AgentPage } from './pages/AgentPage'
+import { PrivacyPage } from './pages/PrivacyPage'
+import { TermsPage } from './pages/TermsPage'
 import { useAuth } from './hooks/useAuth'
 import { Spinner } from './components/ui/Spinner'
 
 function ProtectedLayout() {
   const { isAuthenticated, isHydrated } = useAuth()
   const location = useLocation()
-  const requireAuth = import.meta.env.VITE_REQUIRE_AUTH === 'true'
 
   if (!isHydrated) {
     return (
@@ -24,7 +25,7 @@ function ProtectedLayout() {
     )
   }
 
-  if (requireAuth && !isAuthenticated) {
+  if (!isAuthenticated) {
     return <Navigate to="/auth" replace state={{ from: location.pathname }} />
   }
 
@@ -49,6 +50,8 @@ export default function App() {
     <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/auth" element={<AuthPage />} />
+      <Route path="/privacy" element={<PrivacyPage />} />
+      <Route path="/terms" element={<TermsPage />} />
       <Route element={<ProtectedLayout />}>
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/profile" element={<ProfilePage />} />

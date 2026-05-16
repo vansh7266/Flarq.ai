@@ -6,6 +6,7 @@ import json
 from typing import Any, Literal
 
 from app.services.gemini.client import generate_json_from_prompt
+from app.utils.sanitize import sanitize_value
 
 Tone = Literal["professional", "conversational", "bold"]
 
@@ -36,6 +37,9 @@ async def generate_cover_letter(
     gap_analysis: dict[str, Any],
     tone: Tone = "professional",
 ) -> dict[str, Any]:
+    profile = sanitize_value(profile, 10000)
+    jd_analysis = sanitize_value(jd_analysis, 10000)
+    gap_analysis = sanitize_value(gap_analysis, 10000)
     user_prompt = (
         f"Tone: {tone}\n\n"
         "Candidate profile JSON:\n"

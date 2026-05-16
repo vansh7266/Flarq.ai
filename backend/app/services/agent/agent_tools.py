@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from typing import Any
 
@@ -47,11 +48,12 @@ async def search_applications(
     if status:
         clauses.append({"status": status})
     if company:
+        escaped_company = re.escape(company)
         clauses.append(
             {
                 "$or": [
-                    {"company_name": {"$regex": company, "$options": "i"}},
-                    {"company": {"$regex": company, "$options": "i"}},
+                    {"company_name": {"$regex": escaped_company, "$options": "i"}},
+                    {"company": {"$regex": escaped_company, "$options": "i"}},
                 ]
             }
         )

@@ -22,6 +22,7 @@ router = APIRouter(prefix="/profile", tags=["profile"])
 ALLOWED_RESUME_TYPES = {
     "application/pdf",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/msword",
 }
 
 
@@ -181,12 +182,28 @@ async def upload_resume(
             status_code=status.HTTP_400_BAD_REQUEST,
         )
 
-    if file.content_type and file.content_type not in ALLOWED_RESUME_TYPES:
+    content_type = file.content_type or ""
+    if content_type not in ALLOWED_RESUME_TYPES:
         return json_response(
             success=False,
-            message="Unsupported MIME type. Upload a PDF or DOCX file.",
+            message="Only PDF and DOCX files are accepted",
             data=None,
             error={"code": "UNSUPPORTED_TYPE"},
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+    magic = data[:8]
+    is_pdf = content_type == "application/pdf" and magic.startswith(b"%PDF")
+    is_docx = (
+        content_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        and magic.startswith(b"PK\x03\x04")
+    )
+    is_doc = content_type == "application/msword" and magic.startswith(b"\xd0\xcf\x11\xe0")
+    if not (is_pdf or is_docx or is_doc):
+        return json_response(
+            success=False,
+            message="File signature does not match an accepted PDF or DOCX document",
+            data=None,
+            error={"code": "INVALID_FILE_SIGNATURE"},
             status_code=status.HTTP_400_BAD_REQUEST,
         )
 

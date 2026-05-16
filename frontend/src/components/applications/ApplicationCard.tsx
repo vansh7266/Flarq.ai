@@ -76,7 +76,7 @@ export function ApplicationCard({
       animate={{ opacity: 1, y: 0 }}
       className={clsx(isDragging && 'opacity-95')}
     >
-      <Card className="group relative flex gap-1 rounded-xl border-border bg-white p-3 pr-4 transition-shadow hover:shadow-soft">
+      <Card className="group relative flex gap-1 rounded-xl border-border bg-card p-3 pr-4 transition-shadow hover:scale-[1.02] hover:shadow-glow">
         <button
           type="button"
           className="mt-1 flex shrink-0 cursor-grab touch-none flex-col items-center rounded-md px-0.5 text-text-muted hover:bg-surface-elevated hover:text-text-primary active:cursor-grabbing"
@@ -129,7 +129,7 @@ export function ApplicationCard({
             <p className="line-clamp-2 text-xs text-text-muted">{lastNote}</p>
           ) : null}
 
-          <div className="flex justify-end gap-1 pt-1 opacity-0 transition-opacity group-hover:opacity-100">
+          <div className="flex justify-end gap-1 pt-1 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
             <button
               type="button"
               className="rounded-md p-1.5 text-text-secondary hover:bg-surface-elevated hover:text-text-primary"

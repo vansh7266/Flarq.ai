@@ -17,7 +17,7 @@ async def rotate_refresh_token(
 
     await db["token_blocklist"].update_one(
         {"jti": jti},
-        {"$setOnInsert": {"jti": jti, "expires_at": expires_at}},
+        {"$setOnInsert": {"jti": jti, "expires_at": expires_at, "blocked_at": datetime.now(tz=UTC)}},
         upsert=True,
     )
 

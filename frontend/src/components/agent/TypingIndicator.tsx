@@ -1,12 +1,11 @@
 import { motion } from 'framer-motion'
+import { FlarqOrb } from '../ui/FlarqOrb'
 
 export function TypingIndicator() {
   return (
     <div className="flex items-start gap-3">
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-extrabold text-white">
-        F
-      </div>
-      <div className="flex items-center rounded-2xl rounded-bl-sm border border-border bg-white px-4 py-3 shadow-sm">
+      <FlarqOrb size={32} state="thinking" className="shrink-0" />
+      <div className="flex items-center rounded-2xl rounded-bl-sm border border-border bg-card px-4 py-3 shadow-sm">
         <div className="flex h-6 items-end gap-1">
           {[0, 1, 2].map((bar) => (
             <motion.div

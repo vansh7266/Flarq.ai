@@ -58,6 +58,9 @@ export function LoginForm({ onSubmit, isSubmitting }: LoginFormProps) {
       <Button type="submit" className="h-12 w-full" isLoading={isSubmitting}>
         Sign in
       </Button>
+      <Button type="button" variant="secondary" className="h-12 w-full">
+        Continue with Google
+      </Button>
     </form>
   )
 }

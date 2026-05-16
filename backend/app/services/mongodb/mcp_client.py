@@ -10,6 +10,7 @@ import json
 import os
 import sys
 import time
+import asyncio
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Mapping
@@ -35,6 +36,7 @@ class FlarqMCPClient:
         self._session: ClientSession | None = None
         self._cm_stdio = None
         self._cm_session = None
+        self._lock = asyncio.Lock()
         self.server_params = StdioServerParameters(
             command=sys.executable,
             args=[str(_MCP_SERVER_SCRIPT)],
@@ -46,20 +48,21 @@ class FlarqMCPClient:
         )
 
     async def _ensure_session(self) -> None:
-        if self._session is not None:
-            return
+        async with self._lock:
+            if self._session is not None:
+                return
 
-        try:
-            self._cm_stdio = stdio_client(self.server_params)
-            read, write = await self._cm_stdio.__aenter__()
-            self._cm_session = ClientSession(read, write)
-            self._session = await self._cm_session.__aenter__()
-            await self._session.initialize()
-            logger.info("mcp_session_initialized")
-        except Exception as e:
-            self._session = None
-            logger.error("mcp_session_init_failed", error=str(e))
-            raise
+            try:
+                self._cm_stdio = stdio_client(self.server_params)
+                read, write = await self._cm_stdio.__aenter__()
+                self._cm_session = ClientSession(read, write)
+                self._session = await self._cm_session.__aenter__()
+                await self._session.initialize()
+                logger.info("mcp_session_initialized")
+            except Exception as e:
+                self._session = None
+                logger.error("mcp_session_init_failed", error=str(e))
+                raise
 
     async def close(self) -> None:
         if self._cm_session:
@@ -78,7 +81,8 @@ class FlarqMCPClient:
         try:
             if self._session is None:
                 raise RuntimeError("MCP session not initialized")
-            result = await self._session.call_tool(tool_name, arguments)
+            async with asyncio.timeout(30):
+                result = await self._session.call_tool(tool_name, arguments)
 
             duration_ms = (time.monotonic() - start) * 1000
             logger.info(
@@ -106,6 +110,9 @@ class FlarqMCPClient:
 
         except Exception as e:
             self._session = None
+            if isinstance(e, TimeoutError):
+                logger.error("mcp_tool_call_timeout", tool=tool_name)
+                raise RuntimeError(f"MCP tool {tool_name} timed out after 30s") from e
             logger.error("mcp_tool_call_failed", tool=tool_name, error=str(e))
             raise
 

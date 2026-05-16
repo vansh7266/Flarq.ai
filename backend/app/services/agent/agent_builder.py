@@ -11,7 +11,6 @@ from vertexai.generative_models import Content, Part
 
 from app.core.config import get_settings
 from app.services.agent import agent_tools
-from app.services.gemini.client import generate_json_from_prompt
 from app.services.gemini.vertex_client import build_agent_tools, vertex_client
 from app.services.mongodb.mcp_client import FlarqMCPClient
 
@@ -66,23 +65,36 @@ def _history_to_contents(history: list[dict[str, Any]]) -> list[Content]:
     return out
 
 
-async def _build_suggestions(user_message: str, assistant_reply: str) -> list[str]:
-    try:
-        data = await generate_json_from_prompt(
-            system_instruction='Return JSON only: {"suggestions": [string, string, string]} — short next prompts (max 6 words each).',
-            user_prompt=f"User asked: {user_message[:400]}\nAssistant answered: {assistant_reply[:800]}",
-            temperature=0.4,
-        )
-        sugs = data.get("suggestions") if isinstance(data, dict) else None
-        if isinstance(sugs, list) and len(sugs) >= 3:
-            return [str(sugs[0]), str(sugs[1]), str(sugs[2])]
-    except Exception:  # noqa: BLE001
-        pass
+def generate_suggestions(last_response: str, tools_used: list[str]) -> list[str]:
+    tool_text = " ".join(tools_used).lower()
+    response_text = last_response.lower()
+    if "analytics" in tool_text or "insight" in response_text:
+        return [
+            "Which companies should I target?",
+            "How can I improve my response rate?",
+            "Write a follow-up for my best application",
+        ]
+    if "stale" in tool_text or "follow" in response_text:
+        return [
+            "Draft all follow-up emails",
+            "Show my analytics",
+            "What's my strongest application?",
+        ]
+    if "profile" in tool_text:
+        return [
+            "What roles am I best suited for?",
+            "Analyze a new job description",
+            "How am I doing overall?",
+        ]
     return [
         "How am I doing?",
         "What needs follow-up?",
-        "Analyze my patterns",
+        "Show my analytics",
     ]
+
+
+async def _build_suggestions(_user_message: str, assistant_reply: str) -> list[str]:
+    return generate_suggestions(assistant_reply, [])
 
 
 async def run_agent(
@@ -117,7 +129,7 @@ async def run_agent(
 
         if not fcs:
             final_text = (getattr(response, "text", None) or "").strip()
-            suggestions = await _build_suggestions(message, final_text)
+            suggestions = generate_suggestions(final_text, tools_used)
             return {
                 "response": final_text or "I could not produce a response. Please try again.",
                 "tools_used": tools_used,
@@ -142,5 +154,5 @@ async def run_agent(
     return {
         "response": "I hit the maximum tool depth — please narrow your question.",
         "tools_used": tools_used,
-        "suggestions": await _build_suggestions(message, ""),
+        "suggestions": generate_suggestions("", tools_used),
     }

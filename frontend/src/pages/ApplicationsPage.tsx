@@ -37,6 +37,7 @@ export function ApplicationsPage() {
   const [interviewOpen, setInterviewOpen] = useState(false)
   const [interviewApp, setInterviewApp] = useState<JobApplication | null>(null)
   const [interviewWhen, setInterviewWhen] = useState('')
+  const [deleteApp, setDeleteApp] = useState<JobApplication | null>(null)
 
   const filtered = useMemo(() => {
     if (!data) return null
@@ -113,7 +114,7 @@ export function ApplicationsPage() {
       <div className="space-y-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <h1 className="text-3xl font-extrabold text-text-primary sm:text-4xl">Applications</h1>
+            <h1 className="font-display text-3xl font-bold text-gradient sm:text-4xl">Applications</h1>
             <p className="mt-2 max-w-2xl text-text-secondary">
               Drag cards across stages and keep every opportunity moving.
             </p>
@@ -124,7 +125,7 @@ export function ApplicationsPage() {
           </Button>
         </div>
 
-        <div className="flex flex-col gap-3 rounded-2xl border border-border bg-white p-4 shadow-sm lg:flex-row lg:items-center">
+        <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm lg:flex-row lg:items-center">
           <label className="relative lg:w-80">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
             <Input
@@ -142,7 +143,7 @@ export function ApplicationsPage() {
                 type="button"
                 onClick={() => setPriority(p)}
                 className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${
-                  priority === p ? 'teal-cta text-white' : 'bg-surface text-text-secondary ring-1 ring-border'
+                  priority === p ? 'grad-neural text-white' : 'bg-surface text-text-secondary ring-1 ring-border'
                 }`}
               >
                 {p}
@@ -152,7 +153,7 @@ export function ApplicationsPage() {
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs font-medium text-text-muted">Sort</span>
             <select
-              className="rounded-xl border border-border bg-white px-3 py-2 text-sm text-text-primary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+              className="rounded-xl border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
               value={sort}
               onChange={(e) =>
                 setSort(e.target.value as 'last_updated' | 'applied_date' | 'match_score')
@@ -208,11 +209,7 @@ export function ApplicationsPage() {
                 navigate('/analyze')
               }
             }}
-            onDelete={(app) => {
-              if (window.confirm(`Archive application at ${app.companyName}?`)) {
-                deleteMutation.mutate(app.id)
-              }
-            }}
+            onDelete={(app) => setDeleteApp(app)}
           />
         )}
       </div>
@@ -249,7 +246,7 @@ export function ApplicationsPage() {
               {noteApp.companyName} — {noteApp.jobTitle}
             </p>
             <textarea
-              className="min-h-[100px] w-full rounded-xl border border-border bg-white p-3 text-sm text-text-primary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+              className="min-h-[100px] w-full rounded-xl border border-border bg-surface p-3 text-sm text-text focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
               value={noteText}
               onChange={(e) => setNoteText(e.target.value)}
               aria-label="Application note"
@@ -282,7 +279,7 @@ export function ApplicationsPage() {
             </p>
             <input
               type="datetime-local"
-              className="w-full rounded-xl border border-border bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
               value={interviewWhen}
               onChange={(e) => setInterviewWhen(e.target.value)}
               required
@@ -296,6 +293,31 @@ export function ApplicationsPage() {
               </Button>
             </div>
           </form>
+        ) : null}
+      </Modal>
+
+      <Modal open={Boolean(deleteApp)} onClose={() => setDeleteApp(null)} title="Delete Application">
+        {deleteApp ? (
+          <div className="space-y-4">
+            <p className="text-sm text-text-secondary">
+              Are you sure you want to delete the application at {deleteApp.companyName}? This cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <Button type="button" variant="ghost" onClick={() => setDeleteApp(null)}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                onClick={() => {
+                  deleteMutation.mutate(deleteApp.id)
+                  setDeleteApp(null)
+                }}
+              >
+                Delete
+              </Button>
+            </div>
+          </div>
         ) : null}
       </Modal>
     </PageWrapper>

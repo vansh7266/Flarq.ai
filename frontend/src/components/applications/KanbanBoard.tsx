@@ -12,15 +12,15 @@ import type { JobApplication } from '../../types/application.types'
 const MAIN_COLUMNS: { id: string; title: string; border: string }[] = [
   { id: 'saved', title: 'Saved', border: 'border-t-slate-400' },
   { id: 'applied', title: 'Applied', border: 'border-t-primary' },
-  { id: 'phone_screen', title: 'Phone Screen', border: 'border-t-accent' },
-  { id: 'interview', title: 'Interview', border: 'border-t-blue-500' },
+  { id: 'phone_screen', title: 'Phone Screen', border: 'border-t-sky' },
+  { id: 'interview', title: 'Interview', border: 'border-t-amber' },
   { id: 'offer', title: 'Offer', border: 'border-t-emerald-500' },
 ]
 
 const OUTCOME_COLUMNS: { id: string; title: string; border: string }[] = [
   { id: 'accepted', title: 'Accepted', border: 'border-t-green-600' },
-  { id: 'rejected', title: 'Rejected', border: 'border-t-red-500' },
-  { id: 'ghosted', title: 'Ghosted', border: 'border-t-gray-500' },
+  { id: 'rejected', title: 'Rejected', border: 'border-t-rose' },
+  { id: 'ghosted', title: 'Ghosted', border: 'border-t-muted' },
 ]
 
 interface KanbanBoardProps {
