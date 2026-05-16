@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowRight, Bot, ClipboardList, FilePenLine, Play, Target } from 'lucide-react'
+import { ArrowRight, ClipboardList, FilePenLine, Play, Target } from 'lucide-react'
 import { Button } from '../components/ui/Button'
 import { GlowCard } from '../components/ui/GlowCard'
 import { MatchScoreRing } from '../components/analyze/MatchScoreRing'

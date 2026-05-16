@@ -1,7 +1,7 @@
 import { api } from './api'
 import type { ApiEnvelope } from '../types/auth.types'
 import type { AuthTokens, AuthUser, LoginRequest, RegisterRequest } from '../types/auth.types'
-import { REFRESH_TOKEN_KEY } from '../utils/constants'
+import { useAuthStore } from '../store/authStore'
 
 interface RegisterResponseData {
   user: AuthUser
@@ -75,7 +75,7 @@ export async function login(
 }
 
 export async function refreshSession(): Promise<AuthTokens | null> {
-  const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY)
+  const refreshToken = useAuthStore.getState().refreshToken
   if (!refreshToken) {
     return null
   }

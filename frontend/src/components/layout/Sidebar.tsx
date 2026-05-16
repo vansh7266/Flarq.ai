@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import {
   BarChart2,
@@ -14,13 +14,13 @@ import { useAuth } from '../../hooks/useAuth'
 import { cn, initials } from '../../utils/helpers'
 import { FlarqOrb } from '../ui/FlarqOrb'
 
-const items = [
+const items: Array<{ to: string; label: string; icon: React.FC<{ className?: string }>; pulse?: boolean }> = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/analyze', label: 'Analyze', icon: Search },
   { to: '/applications', label: 'Applications', icon: Kanban },
   { to: '/analytics', label: 'Analytics', icon: BarChart2 },
   { to: '/agent', label: 'Agent', icon: MessageSquare, pulse: true },
-] as const
+]
 
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false)

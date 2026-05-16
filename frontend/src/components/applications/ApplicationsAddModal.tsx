@@ -90,7 +90,7 @@ export function ApplicationsAddModal({
                 type="button"
                 onClick={() => setPriority(p)}
                 className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ring-1 ring-border transition ${
-                  priority === p ? 'teal-cta text-white ring-primary' : 'bg-surface text-text-secondary'
+                  priority === p ? 'grad-neural text-white ring-primary' : 'bg-surface text-text-secondary'
                 }`}
               >
                 {p}

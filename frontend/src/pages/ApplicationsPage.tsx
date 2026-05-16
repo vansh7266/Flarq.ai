@@ -171,9 +171,9 @@ export function ApplicationsPage() {
             <Spinner />
           </div>
         ) : isError || !filtered ? (
-          <div className="rounded-2xl border border-danger/25 bg-red-50 p-5 text-sm text-danger">
-            <p className="font-bold">Unable to load applications.</p>
-            <p className="mt-1 text-red-700">Check that you are signed in and the API is running.</p>
+          <div className="rounded-2xl border border-rose/30 bg-rose/5 p-6 text-sm">
+            <p className="font-display font-bold text-rose">Unable to load applications.</p>
+            <p className="mt-1 text-text-secondary">Check that you are signed in and the API is running.</p>
             <Button
               type="button"
               variant="danger"
