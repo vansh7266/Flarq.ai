@@ -11,6 +11,7 @@ from vertexai.generative_models import Content, Part
 
 from app.core.config import get_settings
 from app.services.agent import agent_tools
+from app.services.agent.agent_builder_client import agent_builder_client
 from app.services.gemini.vertex_client import build_agent_tools, vertex_client
 from app.services.mongodb.mcp_client import FlarqMCPClient
 
@@ -107,6 +108,23 @@ async def run_agent(
     if not (settings.google_cloud_project or "").strip():
         raise RuntimeError("GOOGLE_CLOUD_PROJECT is required for the FLARQ agent (Vertex AI).")
 
+    # --- Agent Builder first-pass (Google Cloud Rapid Agent Hackathon) ---
+    agent_builder_reply: str | None = None
+    agent_builder_session_id: str | None = None
+
+    if agent_builder_client.is_configured:
+        try:
+            ab_result = await agent_builder_client.converse(
+                query=message,
+                session_id=None,
+            )
+            agent_builder_reply = ab_result.get("reply", "")
+            agent_builder_session_id = ab_result.get("session_id")
+            logger.info("agent_builder_first_pass", reply_len=len(agent_builder_reply or ""))
+        except Exception as e:
+            logger.warning("agent_builder_fallback", error=str(e))
+
+    # --- Vertex AI tool-calling loop ---
     tools = build_agent_tools()
     contents: list[Content] = _history_to_contents(history)
     contents.append(Content(role="user", parts=[Part.from_text(message)]))
@@ -130,11 +148,19 @@ async def run_agent(
         if not fcs:
             final_text = (getattr(response, "text", None) or "").strip()
             suggestions = generate_suggestions(final_text, tools_used)
-            return {
+            result: dict[str, Any] = {
                 "response": final_text or "I could not produce a response. Please try again.",
                 "tools_used": tools_used,
                 "suggestions": suggestions,
             }
+            # Include Agent Builder metadata if available
+            if agent_builder_session_id:
+                result["agent_builder_session_id"] = agent_builder_session_id
+            if agent_builder_reply and not tools_used:
+                # For simple queries without tool calls, prepend Agent Builder
+                # grounding context as supplemental information
+                result["agent_builder_reply"] = agent_builder_reply
+            return result
 
         contents.append(cand.content)
         tool_calls = [(fc.name, _fc_args(fc)) for fc in fcs]
@@ -151,8 +177,11 @@ async def run_agent(
         ]
         contents.append(Content(role="user", parts=fr_parts))
 
-    return {
+    final_result: dict[str, Any] = {
         "response": "I hit the maximum tool depth — please narrow your question.",
         "tools_used": tools_used,
         "suggestions": generate_suggestions("", tools_used),
     }
+    if agent_builder_session_id:
+        final_result["agent_builder_session_id"] = agent_builder_session_id
+    return final_result

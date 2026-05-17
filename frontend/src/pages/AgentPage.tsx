@@ -3,17 +3,19 @@ import { useSearchParams } from 'react-router-dom'
 import { Plus, Settings } from 'lucide-react'
 import { AgentChatPanel } from '../components/agent/AgentChatPanel'
 import { FlarqOrb } from '../components/ui/FlarqOrb'
-import { useAgentChat, useAgentHistory } from '../hooks/useAgent'
+import { useAgentHistory } from '../hooks/useAgent'
 import { useAuth } from '../hooks/useAuth'
 import { usePageTitle } from '../hooks/usePageTitle'
 import * as agentService from '../services/agentService'
-import type { AgentMessage } from '../types/agent.types'
+import { streamChat } from '../services/api'
+import type { AgentMessage, ToolExecutionEntry } from '../types/agent.types'
 import { initials } from '../utils/helpers'
 
 function createMessage(
   role: AgentMessage['role'],
   content: string,
-  toolChips?: string[]
+  toolChips?: string[],
+  isStreaming?: boolean
 ): AgentMessage {
   const id =
     typeof crypto !== 'undefined' && 'randomUUID' in crypto
@@ -26,6 +28,7 @@ function createMessage(
     content,
     createdAt: new Date().toISOString(),
     toolChips,
+    isStreaming,
   }
 }
 
@@ -51,12 +54,16 @@ export function AgentPage() {
     'What needs follow-up?',
     'Show analytics',
   ])
-  const chatMutation = useAgentChat()
   const historyQuery = useAgentHistory(isAuthenticated)
-  const abortRef = useRef<AbortController | null>(null)
   const promptHandledRef = useRef(false)
 
-  const isSending = chatMutation.isPending
+  // ── Streaming state ──
+  const [isSending, setIsSending] = useState(false)
+  const [isThinking, setIsThinking] = useState(false)
+  const [thinkingMessage, setThinkingMessage] = useState<string | null>(null)
+  const [toolTimeline, setToolTimeline] = useState<ToolExecutionEntry[]>([])
+  const streamingMsgIdRef = useRef<string | null>(null)
+  const abortRef = useRef<AbortController | null>(null)
 
   const orderedMessages = useMemo(
     () => [...messages].sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
@@ -65,39 +72,134 @@ export function AgentPage() {
 
   const handleSend = useCallback(
     async (text: string) => {
+      if (isSending) return
       const userMessage = createMessage('user', text)
       setMessages((previous) => [...previous, userMessage])
-      abortRef.current?.abort()
-      abortRef.current = new AbortController()
-      try {
-        const response = await chatMutation.mutateAsync({
-          message: text,
-          conversationId,
-          signal: abortRef.current.signal,
-        })
-        setConversationId(response.conversationId)
-        setSuggestions(
-          response.suggestions && response.suggestions.length >= 3
-            ? response.suggestions
-            : ['How am I doing?', 'What needs follow-up?', 'Show analytics']
-        )
-        setMessages((previous) => [
-          ...previous,
-          createMessage('assistant', response.response, response.toolsUsed),
-        ])
-        void historyQuery.refetch()
-      } catch {
-        setMessages((previous) => [
-          ...previous,
-          createMessage(
-            'assistant',
-            'Something went wrong reaching the agent. Check Vertex AI auth and try again.'
-          ),
-        ])
-      }
+
+      // Reset streaming state
+      setIsSending(true)
+      setIsThinking(true)
+      setThinkingMessage('Analyzing your request...')
+      setToolTimeline([])
+
+      // Create a placeholder for the streaming assistant message
+      const assistantId =
+        typeof crypto !== 'undefined' && 'randomUUID' in crypto
+          ? crypto.randomUUID()
+          : `${Date.now()}-assistant-${Math.random().toString(16).slice(2)}`
+      streamingMsgIdRef.current = assistantId
+
+      const assistantPlaceholder = createMessage('assistant', '', undefined, true)
+      assistantPlaceholder.id = assistantId
+      setMessages((previous) => [...previous, assistantPlaceholder])
+
+      // Use the callback-based streaming API from api.ts
+      const controller = streamChat(text, conversationId, {
+        onThinking: (msg) => {
+          setIsThinking(true)
+          setThinkingMessage(msg)
+        },
+
+        onToolStart: (tool, msg) => {
+          setIsThinking(false)
+          setToolTimeline((prev) => [
+            ...prev,
+            { tool, message: msg, status: 'running' },
+          ])
+        },
+
+        onToolComplete: (tool) => {
+          setToolTimeline((prev) =>
+            prev.map((t) =>
+              t.tool === tool ? { ...t, status: 'complete' } : t
+            )
+          )
+        },
+
+        onToken: (content) => {
+          setIsThinking(false)
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === streamingMsgIdRef.current
+                ? { ...m, content: m.content + content }
+                : m
+            )
+          )
+        },
+
+        onDone: (data) => {
+          setIsSending(false)
+          setIsThinking(false)
+          setThinkingMessage(null)
+          setConversationId(data.conversation_id)
+          setSuggestions(
+            data.suggestions && data.suggestions.length >= 3
+              ? data.suggestions
+              : ['How am I doing?', 'What needs follow-up?', 'Show analytics']
+          )
+          // Mark message as done streaming and add tool chips
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === streamingMsgIdRef.current
+                ? {
+                    ...m,
+                    isStreaming: false,
+                    toolChips:
+                      data.tools_used && data.tools_used.length > 0
+                        ? data.tools_used
+                        : m.toolChips,
+                  }
+                : m
+            )
+          )
+          setToolTimeline([])
+          void historyQuery.refetch()
+        },
+
+        onError: (errorMsg) => {
+          setIsSending(false)
+          setIsThinking(false)
+          setThinkingMessage(null)
+          setToolTimeline([])
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === streamingMsgIdRef.current
+                ? {
+                    ...m,
+                    isStreaming: false,
+                    content:
+                      m.content ||
+                      errorMsg ||
+                      'Something went wrong reaching the agent. Check Vertex AI auth and try again.',
+                  }
+                : m
+            )
+          )
+        },
+      })
+
+      abortRef.current = controller
     },
-    [chatMutation, conversationId, historyQuery]
+    [conversationId, historyQuery, isSending]
   )
+
+  const handleCancel = useCallback(() => {
+    abortRef.current?.abort()
+    setIsSending(false)
+    setIsThinking(false)
+    setThinkingMessage(null)
+    setToolTimeline([])
+    // Mark the streaming message as done (partial content)
+    if (streamingMsgIdRef.current) {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === streamingMsgIdRef.current
+            ? { ...m, isStreaming: false }
+            : m
+        )
+      )
+    }
+  }, [])
 
   useEffect(() => {
     const prompt = searchParams.get('prompt')
@@ -109,8 +211,13 @@ export function AgentPage() {
 
   const startNew = () => {
     promptHandledRef.current = false
+    abortRef.current?.abort()
     setMessages([])
     setConversationId(null)
+    setIsSending(false)
+    setIsThinking(false)
+    setThinkingMessage(null)
+    setToolTimeline([])
     setSuggestions(['How am I doing?', 'What needs follow-up?', 'Show analytics'])
   }
 
@@ -126,19 +233,20 @@ export function AgentPage() {
         m.tool_calls && Array.isArray(m.tool_calls)
           ? (m.tool_calls.filter(Boolean) as string[])
           : undefined,
+      isStreaming: false,
     }))
     setMessages(mapped)
   }
 
   return (
     <div className="flex h-screen bg-void text-text">
-      <aside className="hidden w-60 shrink-0 flex-col border-r border-border/50 bg-surface md:flex">
+      <aside className="hidden w-60 shrink-0 flex-col border-r border-border/40 bg-card md:flex">
         <div className="border-b border-border p-4">
           <div className="flex items-center gap-3">
             <FlarqOrb size={40} state={isSending ? 'thinking' : 'idle'} />
             <div>
               <p className="font-display font-semibold text-gradient">FLARQ</p>
-              <p className="font-mono text-xs text-primary">AGENT</p>
+              <p className="font-mono text-xs text-accent">AGENT</p>
             </div>
           </div>
           <button
@@ -159,9 +267,9 @@ export function AgentPage() {
                   key={row.conversationId}
                   type="button"
                   onClick={() => void loadConversation(row.conversationId)}
-                  className={`flex w-full items-center gap-2 rounded-lg px-3 py-3 text-left transition hover:bg-card/50 ${
+                  className={`flex w-full items-center gap-2 rounded-lg px-3 py-3 text-left transition hover:bg-surface/50 ${
                     conversationId === row.conversationId
-                      ? 'border-l-2 border-primary bg-card text-text'
+                      ? 'border-l-2 border-accent bg-surface text-text'
                       : 'border-l-2 border-transparent'
                   }`}
                 >
@@ -181,14 +289,14 @@ export function AgentPage() {
 
         <div className="border-t border-border p-4">
           <div className="flex items-center gap-3">
-            <div className="grad-neural flex h-9 w-9 items-center justify-center rounded-full text-sm font-extrabold text-white">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-accent/20 text-sm font-extrabold text-accent">
               {initials(user?.fullName, user?.email)}
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold text-text">{user?.fullName ?? 'Flarq user'}</p>
               <p className="text-xs text-muted">Workspace</p>
             </div>
-            <Settings className="h-4 w-4 text-muted" />
+            <Settings className="h-4 w-4 text-muted transition hover:text-accent" />
           </div>
         </div>
       </aside>
@@ -199,6 +307,10 @@ export function AgentPage() {
         suggestions={suggestions}
         onSend={handleSend}
         onPickSuggestion={(text) => void handleSend(text)}
+        onCancel={handleCancel}
+        toolTimeline={toolTimeline}
+        isThinking={isThinking}
+        thinkingMessage={thinkingMessage}
       />
     </div>
   )

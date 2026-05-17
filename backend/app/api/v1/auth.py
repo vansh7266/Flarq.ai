@@ -3,8 +3,11 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Request, status
 from fastapi.responses import JSONResponse
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
+from app.core.config import get_settings
 from app.core.dependencies import Database
 from app.core.limiter import limiter
 from app.core.responses import json_response
@@ -51,6 +54,10 @@ class LogoutRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     refresh_token: str = Field(alias="refreshToken")
+
+
+class GoogleAuthRequest(BaseModel):
+    credential: str = Field(min_length=1)
 
 
 def _serialize_user(document: dict[str, Any]) -> dict[str, Any]:
@@ -262,4 +269,81 @@ async def logout_user(request: Request, payload: LogoutRequest, db: Database) ->
         success=True,
         message="Logged out",
         data=None,
+    )
+
+
+@router.post("/google")
+@limiter.limit("20/minute")
+async def google_auth(
+    request: Request,
+    payload: GoogleAuthRequest,
+    db: Database,
+    users: UserRepo,
+) -> JSONResponse:
+    """Authenticate user via Google OAuth credential.
+
+    Verifies the Google ID token and creates/finds a user in the database.
+    """
+    settings = get_settings()
+    google_client_id = getattr(settings, "google_client_id", "") or ""
+
+    try:
+        idinfo = id_token.verify_oauth2_token(
+            payload.credential,
+            google_requests.Request(),
+            audience=google_client_id,
+        )
+    except ValueError as exc:
+        return json_response(
+            success=False,
+            message=f"Invalid Google credential: {exc}",
+            data=None,
+            error={"code": "INVALID_GOOGLE_CREDENTIAL"},
+            status_code=status.HTTP_401_UNAUTHORIZED,
+        )
+
+    email = idinfo.get("email", "")
+    name = idinfo.get("name", "")
+    picture = idinfo.get("picture", "")
+
+    if not email:
+        return json_response(
+            success=False,
+            message="No email in Google credential",
+            data=None,
+            error={"code": "NO_EMAIL"},
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # Find or create user
+    user_doc = await users.find_by_email(email)
+    if user_doc is None:
+        try:
+            user_doc = await users.create_google_user(
+                email=email,
+                full_name=name or email.split("@")[0],
+                picture=picture,
+            )
+        except ValueError as exc:
+            return json_response(
+                success=False,
+                message=str(exc),
+                data=None,
+                error={"code": "EMAIL_TAKEN"},
+                status_code=status.HTTP_409_CONFLICT,
+            )
+
+    access_token, expires_in = create_access_token(
+        subject=str(user_doc["_id"]),
+        email=user_doc["email"],
+    )
+    refresh_token, _, _ = create_refresh_token(subject=str(user_doc["_id"]))
+
+    return json_response(
+        success=True,
+        message="Authenticated via Google",
+        data={
+            "user": _serialize_user(user_doc),
+            "tokens": _serialize_tokens(access_token, refresh_token, expires_in),
+        },
     )

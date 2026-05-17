@@ -35,6 +35,34 @@ class UserRepository:
         document["_id"] = result.inserted_id
         return document
 
+    async def create_google_user(
+        self,
+        *,
+        email: str,
+        full_name: str,
+        picture: str | None = None,
+    ) -> dict[str, Any]:
+        """Create a user authenticated via Google OAuth (no password)."""
+        now = datetime.now(tz=UTC)
+        document: dict[str, Any] = {
+            "email": email.lower(),
+            "full_name": full_name,
+            "hashed_password": "",
+            "auth_provider": "google",
+            "picture": picture or "",
+            "is_active": True,
+            "created_at": now,
+            "updated_at": now,
+        }
+
+        try:
+            result = await self._collection.insert_one(document)
+        except DuplicateKeyError as exc:
+            raise ValueError("Email already registered") from exc
+
+        document["_id"] = result.inserted_id
+        return document
+
     async def find_by_email(self, email: str) -> dict[str, Any] | None:
         return await self._collection.find_one({"email": email.lower()})
 

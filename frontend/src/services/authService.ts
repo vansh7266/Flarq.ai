@@ -97,6 +97,24 @@ export async function refreshSession(): Promise<AuthTokens | null> {
   }
 }
 
+export async function googleAuth(
+  credential: string
+): Promise<{ user: AuthUser; tokens: AuthTokens }> {
+  const { data } = await api.post<ApiEnvelope<RegisterResponseData>>(
+    '/api/v1/auth/google',
+    { credential }
+  )
+
+  if (!data.success || !data.data) {
+    throw new Error(data.message ?? 'Google authentication failed')
+  }
+
+  return {
+    user: data.data.user,
+    tokens: mapTokens(data.data.tokens),
+  }
+}
+
 export async function logout(refreshToken: string | null): Promise<void> {
   if (!refreshToken) {
     return

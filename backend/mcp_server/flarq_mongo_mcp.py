@@ -10,7 +10,9 @@ import argparse
 import asyncio
 import json
 import os
+import sys
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 import motor.motor_asyncio
@@ -18,6 +20,11 @@ from bson import ObjectId
 import mcp.types as types
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
+
+# Allow importing from the app package
+_backend_root = str(Path(__file__).resolve().parent.parent)
+if _backend_root not in sys.path:
+    sys.path.insert(0, _backend_root)
 
 ALLOWED_COLLECTIONS = frozenset(
     {
@@ -310,16 +317,21 @@ async def _list_tools() -> list[types.Tool]:
         ),
         types.Tool(
             name="mongodb_vector_search",
-            description="Atlas $vectorSearch on embedding path (returns empty if unavailable)",
+            description=(
+                "Atlas $vectorSearch on embedding path. "
+                "Provide either query_text (auto-embeds via Vertex AI) or query_vector directly. "
+                "Returns empty if index is unavailable."
+            ),
             inputSchema={
                 "type": "object",
                 "properties": {
                     "collection": {"type": "string"},
-                    "query_vector": {"type": "array", "items": {"type": "number"}},
+                    "query_text": {"type": "string", "description": "Text to embed and search with (uses Vertex AI text-embedding-004)"},
+                    "query_vector": {"type": "array", "items": {"type": "number"}, "description": "Pre-computed embedding vector (alternative to query_text)"},
                     "index_name": {"type": "string"},
                     "limit": {"type": "integer", "default": 10},
                 },
-                "required": ["collection", "query_vector", "index_name", "limit"],
+                "required": ["collection", "index_name"],
             },
         ),
     ]
@@ -455,9 +467,31 @@ async def _call_tool(name: str, arguments: dict[str, Any]) -> list[types.TextCon
             result = {"count": count}
 
         elif name == "mongodb_vector_search":
-            query_vector = list(arguments["query_vector"])
+            query_text = arguments.get("query_text")
+            query_vector_raw = arguments.get("query_vector")
             index_name = str(arguments["index_name"])
-            limit = int(arguments["limit"])
+            limit = int(arguments.get("limit", 10))
+
+            # Resolve the query vector: either from text (generate embedding) or provided directly
+            query_vector: list[float] | None = None
+            if query_text and isinstance(query_text, str) and query_text.strip():
+                try:
+                    from app.services.gemini.embeddings import generate_query_embedding
+                    query_vector = await generate_query_embedding(query_text.strip())
+                except Exception as emb_err:
+                    import structlog as _sl
+                    _sl.get_logger("mcp_vector_search").error(
+                        "embedding_generation_failed", error=str(emb_err)
+                    )
+                    query_vector = None
+            elif query_vector_raw:
+                query_vector = [float(v) for v in query_vector_raw]
+
+            if not query_vector:
+                return _error(
+                    "No query vector available. Provide query_text or query_vector."
+                )
+
             pipeline: list[dict[str, Any]] = [
                 {
                     "$vectorSearch": {
@@ -473,7 +507,11 @@ async def _call_tool(name: str, arguments: dict[str, Any]) -> list[types.TextCon
                 cursor = collection.aggregate(pipeline)
                 docs = await cursor.to_list(length=None)
                 result = mongo_serialize(docs)
-            except Exception:
+            except Exception as agg_err:
+                import structlog as _sl
+                _sl.get_logger("mcp_vector_search").warning(
+                    "vector_search_aggregation_failed", error=str(agg_err)
+                )
                 result = []
 
         else:

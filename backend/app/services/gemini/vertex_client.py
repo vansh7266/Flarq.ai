@@ -18,7 +18,10 @@ from vertexai.generative_models import (
     FunctionDeclaration,
     GenerationConfig,
     GenerativeModel,
+    HarmBlockThreshold,
+    HarmCategory,
     Part,
+    SafetySetting,
     Tool,
 )
 
@@ -28,6 +31,25 @@ logger = structlog.get_logger("vertex_ai")
 
 _initialized = False
 _gemini_executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
+
+DEFAULT_SAFETY_SETTINGS = [
+    SafetySetting(
+        category=HarmCategory.HARM_CATEGORY_HARASSMENT,
+        threshold=HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+    ),
+    SafetySetting(
+        category=HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+        threshold=HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+    ),
+    SafetySetting(
+        category=HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+        threshold=HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+    ),
+    SafetySetting(
+        category=HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+        threshold=HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+    ),
+]
 
 
 @lru_cache(maxsize=20)
@@ -41,6 +63,7 @@ def _get_model(
     return GenerativeModel(
         model_name=model_name,
         system_instruction=system_instruction,
+        safety_settings=DEFAULT_SAFETY_SETTINGS,
         generation_config=GenerationConfig(
             temperature=temperature,
             max_output_tokens=max_output_tokens,
@@ -114,7 +137,7 @@ def _sync_generate_text(
                 temperature,
                 max_output_tokens,
             )
-            response = model.generate_content(prompt)
+            response = model.generate_content(prompt, safety_settings=DEFAULT_SAFETY_SETTINGS)
             text = (getattr(response, "text", None) or "").strip()
             if not text and response.candidates:
                 parts = response.candidates[0].content.parts
@@ -176,13 +199,14 @@ class VertexAIClient:
                     model = GenerativeModel(
                         model_name=settings.vertex_ai_model,
                         system_instruction=system_instruction,
+                        safety_settings=DEFAULT_SAFETY_SETTINGS,
                         tools=tools,
                         generation_config=GenerationConfig(
                             temperature=temperature,
                             max_output_tokens=max_output_tokens,
                         ),
                     )
-                    return model.generate_content(contents)
+                    return model.generate_content(contents, safety_settings=DEFAULT_SAFETY_SETTINGS)
                 except Exception as exc:  # noqa: BLE001
                     last_err = exc
                     if not _is_retryable(exc) or attempt == 2:

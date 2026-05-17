@@ -96,3 +96,131 @@ export async function apiRequest<T>(
   const response = await api.request<T>(config)
   return response.data
 }
+
+/* ── SSE Streaming Chat API ── */
+
+export interface StreamChatCallbacks {
+  onThinking?: (message: string) => void
+  onToolStart?: (tool: string, message: string) => void
+  onToolComplete?: (tool: string) => void
+  onToken?: (content: string) => void
+  onDone?: (data: { conversation_id: string; tools_used: string[]; suggestions: string[] }) => void
+  onError?: (message: string) => void
+}
+
+/**
+ * Stream agent chat responses via SSE.
+ * Uses fetch() to POST to `/agent/chat/stream` and reads the response
+ * body as a ReadableStream, parsing SSE events and dispatching to callbacks.
+ *
+ * Returns an AbortController so the caller can cancel the stream.
+ */
+export function streamChat(
+  message: string,
+  conversationId: string | null | undefined,
+  callbacks: StreamChatCallbacks,
+  externalSignal?: AbortSignal
+): AbortController {
+  const controller = new AbortController()
+  const combinedSignal = externalSignal
+    ? AbortSignal.any([externalSignal, controller.signal])
+    : controller.signal
+
+  const doStream = async () => {
+    const token = useAuthStore.getState().accessToken
+    const response = await fetch(`${API_BASE_URL}/api/v1/agent/chat/stream`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({
+        message,
+        conversationId: conversationId ?? undefined,
+      }),
+      signal: combinedSignal,
+    })
+
+    if (!response.ok) {
+      callbacks.onError?.(`Server error: ${response.status}`)
+      return
+    }
+
+    const reader = response.body?.getReader()
+    if (!reader) {
+      callbacks.onError?.('No response stream')
+      return
+    }
+
+    const decoder = new TextDecoder()
+    let buffer = ''
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
+      // Keep the last incomplete line in the buffer
+      buffer = lines.pop() ?? ''
+
+      for (const line of lines) {
+        const trimmed = line.trim()
+        if (!trimmed.startsWith('data: ')) continue
+        const jsonStr = trimmed.slice(6)
+        try {
+          const event = JSON.parse(jsonStr)
+          dispatchSSEEvent(event, callbacks)
+        } catch {
+          // skip malformed JSON
+        }
+      }
+    }
+
+    // Process any remaining buffer
+    if (buffer.trim().startsWith('data: ')) {
+      const jsonStr = buffer.trim().slice(6)
+      try {
+        const event = JSON.parse(jsonStr)
+        dispatchSSEEvent(event, callbacks)
+      } catch {
+        // skip
+      }
+    }
+  }
+
+  doStream().catch((err) => {
+    if (err instanceof DOMException && err.name === 'AbortError') return
+    callbacks.onError?.(err instanceof Error ? err.message : 'Stream failed')
+  })
+
+  return controller
+}
+
+function dispatchSSEEvent(event: { type: string }, callbacks: StreamChatCallbacks) {
+  const e = event as Record<string, unknown>
+  switch (e.type) {
+    case 'thinking':
+      callbacks.onThinking?.(e.message as string)
+      break
+    case 'tool_start':
+      callbacks.onToolStart?.(e.tool as string, e.message as string)
+      break
+    case 'tool_complete':
+      callbacks.onToolComplete?.(e.tool as string)
+      break
+    case 'token':
+      callbacks.onToken?.(e.content as string)
+      break
+    case 'done':
+      callbacks.onDone?.({
+        conversation_id: e.conversation_id as string,
+        tools_used: e.tools_used as string[],
+        suggestions: e.suggestions as string[],
+      })
+      break
+    case 'error':
+      callbacks.onError?.(e.message as string)
+      break
+  }
+}

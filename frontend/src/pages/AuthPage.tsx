@@ -1,23 +1,39 @@
 import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { CheckCircle2 } from 'lucide-react'
+import { GoogleOAuthProvider } from '@react-oauth/google'
 import { LoginForm } from '../components/auth/LoginForm'
 import { SignupForm } from '../components/auth/SignupForm'
+import { GoogleOAuthButton } from '../components/GoogleOAuthButton'
 import { FlarqOrb } from '../components/ui/FlarqOrb'
 import { useAuth } from '../hooks/useAuth'
 import { usePageTitle } from '../hooks/usePageTitle'
+import * as authService from '../services/authService'
+import { useAuthStore } from '../store/authStore'
 import type { LoginFormValues, SignupFormValues } from '../utils/validators'
 
 type AuthMode = 'login' | 'signup'
+
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined
 
 export function AuthPage() {
   usePageTitle('Auth')
   const [searchParams, setSearchParams] = useSearchParams()
   const { login, register, isLoggingIn, isRegistering, isAuthenticated, isHydrated } = useAuth()
+  const setSession = useAuthStore((s) => s.setSession)
 
   const mode: AuthMode = searchParams.get('mode') === 'signup' ? 'signup' : 'login'
   const setMode = (next: AuthMode) => {
     setSearchParams(next === 'signup' ? { mode: 'signup' } : {})
+  }
+
+  const handleGoogleSuccess = async (credential: string) => {
+    try {
+      const result = await authService.googleAuth(credential)
+      setSession(result)
+    } catch {
+      // Error is handled by the API interceptor / toast
+    }
   }
 
   if (!isHydrated) {
@@ -32,7 +48,7 @@ export function AuthPage() {
     return <Navigate to="/dashboard" replace />
   }
 
-  return (
+  const authForm = (
     <main className="grid min-h-screen bg-void text-text lg:grid-cols-2">
       <section className="bg-mesh hidden items-center justify-center border-r border-border p-10 lg:flex">
         <div className="max-w-md text-center">
@@ -84,6 +100,26 @@ export function AuthPage() {
             ))}
           </div>
 
+          {/* Google OAuth Button */}
+          {GOOGLE_CLIENT_ID && (
+            <>
+              <div className="flex items-center justify-center">
+                <GoogleOAuthButton
+                  onSuccess={handleGoogleSuccess}
+                  onError={() => {
+                    // Google OAuth error — silent fail, user can still use email/password
+                  }}
+                />
+              </div>
+
+              <div className="my-5 flex items-center gap-3">
+                <div className="h-px flex-1 bg-border" />
+                <span className="text-xs font-medium text-muted">or continue with email</span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
+            </>
+          )}
+
           <AnimatePresence mode="wait">
             <motion.div
               key={mode}
@@ -121,4 +157,15 @@ export function AuthPage() {
       </section>
     </main>
   )
+
+  // Wrap with GoogleOAuthProvider only if client ID is configured
+  if (GOOGLE_CLIENT_ID) {
+    return (
+      <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+        {authForm}
+      </GoogleOAuthProvider>
+    )
+  }
+
+  return authForm
 }
