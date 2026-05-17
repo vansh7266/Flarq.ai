@@ -26,3 +26,11 @@ venv/
 
 # Logs
 *.log
+
+# Agent framework skill files (not part of Flarq project)
+skills/
+agent-ctx/
+download/
+Flarq.ai/
+generate_audit_report.py
+worklog.md
