@@ -10,6 +10,7 @@ from bson import ObjectId
 from bson.errors import InvalidId
 
 from app.services.applications.application_service import ApplicationService, is_valid_status
+from app.services.job_search import search_job_descriptions
 from app.services.analytics.overview import get_cached_overview
 from app.services.mongodb.mcp_client import FlarqMCPClient, utcnow
 from app.services.scheduler import alert_service
@@ -153,6 +154,8 @@ async def dispatch_tool(
             start_date=args.get("start_date"),
             end_date=args.get("end_date"),
         )
+    if name == "search_job_descriptions":
+        return await search_job_descriptions(mcp, user_id, args.get("query"))
     if name == "get_analytics_insight":
         return await get_analytics_insight(mcp, user_id)
     if name == "get_stale_applications":

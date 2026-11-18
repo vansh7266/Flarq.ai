@@ -1,67 +1,38 @@
-"""Embedding generation using Vertex AI for Atlas Vector Search.
+"""Generate Vertex AI embeddings for the saved job descriptions index."""
 
-Generates text embeddings using the text-embedding-004 model, which produces
-768-dimensional vectors suitable for MongoDB Atlas Vector Search.
-"""
 from __future__ import annotations
 
 import asyncio
-import structlog
-import vertexai
-from vertexai.language_models import TextEmbeddingModel, TextEmbeddingInput
+
+from google.genai.types import EmbedContentConfig
 
 from app.core.config import get_settings
+from app.services.gemini.vertex_client import get_vertex_client
 
-logger = structlog.get_logger("embeddings")
-
-_model: TextEmbeddingModel | None = None
-
-
-def _get_model() -> TextEmbeddingModel:
-    """Get or initialize the embedding model (singleton)."""
-    global _model
-    if _model is None:
-        settings = get_settings()
-        vertexai.init(
-            project=settings.google_cloud_project,
-            location=settings.google_cloud_location,
-        )
-        _model = TextEmbeddingModel.from_pretrained("text-embedding-004")
-        logger.info("embedding_model_initialized", model="text-embedding-004")
-    return _model
+EMBEDDING_DIMENSIONS = 768
 
 
 def _sync_generate_embedding(text: str, task_type: str) -> list[float]:
-    """Synchronous embedding generation (runs in thread executor)."""
-    model = _get_model()
-    inputs = [TextEmbeddingInput(text=text, task_type=task_type)]
-    embeddings = model.get_embeddings(inputs)
-    vector = embeddings[0].values
-    logger.info("embedding_generated", text_len=len(text), vector_dim=len(vector))
-    return vector
+    settings = get_settings()
+    client = get_vertex_client(settings.google_cloud_project, settings.google_cloud_location)
+    response = client.models.embed_content(
+        model=settings.vertex_embedding_model,
+        contents=text,
+        config=EmbedContentConfig(
+            task_type=task_type,
+            output_dimensionality=EMBEDDING_DIMENSIONS,
+        ),
+    )
+    vectors = response.embeddings or []
+    values = vectors[0].values if vectors else None
+    if values is None or len(values) != EMBEDDING_DIMENSIONS:
+        raise ValueError("Vertex AI returned an unexpected embedding shape")
+    return values
 
 
 async def generate_embedding(text: str, task_type: str = "RETRIEVAL_DOCUMENT") -> list[float]:
-    """Generate an embedding vector for the given text.
-
-    Args:
-        text: The text to embed
-        task_type: One of RETRIEVAL_DOCUMENT, RETRIEVAL_QUERY, SEMANTIC_SIMILARITY, etc.
-
-    Returns:
-        A 768-dimensional float vector
-    """
-    try:
-        loop = asyncio.get_running_loop()
-        return await loop.run_in_executor(None, _sync_generate_embedding, text, task_type)
-    except Exception as e:
-        logger.error("embedding_generation_failed", error=str(e))
-        raise
+    return await asyncio.to_thread(_sync_generate_embedding, text, task_type)
 
 
 async def generate_query_embedding(query: str) -> list[float]:
-    """Generate an embedding for a search query.
-
-    Uses RETRIEVAL_QUERY task type for optimal search performance.
-    """
     return await generate_embedding(query, task_type="RETRIEVAL_QUERY")

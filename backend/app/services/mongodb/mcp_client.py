@@ -213,15 +213,20 @@ class FlarqMCPClient:
         query_vector: list[float],
         index_name: str,
         limit: int,
+        *,
+        user_id: str | None = None,
     ) -> list[dict[str, Any]]:
+        arguments = {
+            "collection": collection,
+            "query_vector": query_vector,
+            "index_name": index_name,
+            "limit": limit,
+        }
+        if user_id is not None:
+            arguments["user_id"] = user_id
         res = await self._call(
             "mongodb_vector_search",
-            {
-                "collection": collection,
-                "query_vector": query_vector,
-                "index_name": index_name,
-                "limit": limit,
-            },
+            arguments,
         )
         return res.get("data") or []
 

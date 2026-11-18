@@ -29,11 +29,14 @@ class Settings(BaseSettings):
 
     google_cloud_project: str = Field(..., alias="GOOGLE_CLOUD_PROJECT")
     google_cloud_location: str = Field("us-central1", alias="GOOGLE_CLOUD_LOCATION")
-    vertex_ai_model: str = Field("gemini-2.0-flash-001", alias="VERTEX_AI_MODEL")
+    vertex_ai_location: str = Field("global", alias="VERTEX_AI_LOCATION")
+    vertex_ai_model: str = Field("gemini-3.5-flash-lite", alias="VERTEX_AI_MODEL")
+    vertex_embedding_model: str = Field("gemini-embedding-001", alias="VERTEX_EMBEDDING_MODEL")
     google_client_id: str = Field("", alias="GOOGLE_CLIENT_ID")
 
     max_resume_size_mb: int = Field(5, alias="MAX_RESUME_SIZE_MB")
     max_jd_length: int = Field(10_000, alias="MAX_JD_LENGTH")
+    jobs_vector_index: str = Field("", alias="JOBS_VECTOR_INDEX")
     agent_builder_id: str | None = Field(
         None,
         alias="AGENT_BUILDER_ID",

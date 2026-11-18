@@ -1,6 +1,6 @@
 # Google Cloud authentication for FLARQ (Vertex AI)
 
-FLARQ uses **Vertex AI** (`google-cloud-aiplatform`), not the consumer Gemini API key.
+FLARQ uses the Google Gen AI SDK (`google-genai`) with Vertex AI and Application Default Credentials.
 
 ## Local development
 
@@ -26,8 +26,9 @@ FLARQ uses **Vertex AI** (`google-cloud-aiplatform`), not the consumer Gemini AP
 5. Set env vars (see `backend/.env.example`):
 
    - `GOOGLE_CLOUD_PROJECT`
-   - `GOOGLE_CLOUD_LOCATION` (e.g. `us-central1`)
-   - `VERTEX_AI_MODEL` (e.g. `gemini-2.0-flash-001`)
+   - `VERTEX_AI_LOCATION` (e.g. `global`)
+   - `GOOGLE_CLOUD_LOCATION` (e.g. `us-central1`, for embeddings)
+   - `VERTEX_AI_MODEL` (e.g. `gemini-3.5-flash-lite`)
 
 ## Cloud Run / GKE
 
@@ -37,4 +38,4 @@ FLARQ uses **Vertex AI** (`google-cloud-aiplatform`), not the consumer Gemini AP
 ## Troubleshooting
 
 - `403` / permission errors: confirm the API is enabled and the principal has `aiplatform.user`.
-- Wrong region: model availability is region-specific; align `GOOGLE_CLOUD_LOCATION` with where the model is offered.
+- Wrong region: check model availability for `VERTEX_AI_LOCATION` (generation) and `GOOGLE_CLOUD_LOCATION` (embeddings).

@@ -320,16 +320,17 @@ async def _list_tools() -> list[types.Tool]:
             description=(
                 "Atlas $vectorSearch on embedding path. "
                 "Provide either query_text (auto-embeds via Vertex AI) or query_vector directly. "
-                "Returns empty if index is unavailable."
+                "User-scoped collections require a user_id."
             ),
             inputSchema={
                 "type": "object",
                 "properties": {
                     "collection": {"type": "string"},
-                    "query_text": {"type": "string", "description": "Text to embed and search with (uses Vertex AI text-embedding-004)"},
+                    "query_text": {"type": "string", "description": "Text to embed with the configured Vertex AI embedding model"},
                     "query_vector": {"type": "array", "items": {"type": "number"}, "description": "Pre-computed embedding vector (alternative to query_text)"},
                     "index_name": {"type": "string"},
-                    "limit": {"type": "integer", "default": 10},
+                    "limit": {"type": "integer", "minimum": 1, "maximum": 20, "default": 10},
+                    "user_id": {"type": "string", "minLength": 1},
                 },
                 "required": ["collection", "index_name"],
             },
@@ -471,6 +472,13 @@ async def _call_tool(name: str, arguments: dict[str, Any]) -> list[types.TextCon
             query_vector_raw = arguments.get("query_vector")
             index_name = str(arguments["index_name"])
             limit = int(arguments.get("limit", 10))
+            user_id = arguments.get("user_id")
+            if _requires_user_scope(collection_name) and (
+                not isinstance(user_id, str) or not user_id.strip()
+            ):
+                return _error("user_id required for this collection")
+            if not 1 <= limit <= 20:
+                return _error("limit must be between 1 and 20")
 
             # Resolve the query vector: either from text (generate embedding) or provided directly
             query_vector: list[float] | None = None
@@ -492,16 +500,18 @@ async def _call_tool(name: str, arguments: dict[str, Any]) -> list[types.TextCon
                     "No query vector available. Provide query_text or query_vector."
                 )
 
-            pipeline: list[dict[str, Any]] = [
-                {
-                    "$vectorSearch": {
-                        "index": index_name,
-                        "path": "embedding",
-                        "queryVector": query_vector,
-                        "numCandidates": max(limit * 10, limit),
-                        "limit": limit,
-                    }
-                }
+            vector_stage: dict[str, Any] = {
+                "index": index_name,
+                "path": "embedding",
+                "queryVector": query_vector,
+                "numCandidates": limit * 20,
+                "limit": limit,
+            }
+            if _requires_user_scope(collection_name):
+                vector_stage["filter"] = {"user_id": {"$eq": user_id}}
+            pipeline = [
+                {"$vectorSearch": vector_stage},
+                {"$project": {"embedding": 0}},
             ]
             try:
                 cursor = collection.aggregate(pipeline)
@@ -512,7 +522,7 @@ async def _call_tool(name: str, arguments: dict[str, Any]) -> list[types.TextCon
                 _sl.get_logger("mcp_vector_search").warning(
                     "vector_search_aggregation_failed", error=str(agg_err)
                 )
-                result = []
+                return _error("Atlas Vector Search is unavailable.")
 
         else:
             return [
