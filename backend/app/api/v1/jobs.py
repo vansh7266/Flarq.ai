@@ -13,6 +13,7 @@ from app.core.responses import json_response
 from app.services.gemini.cover_letter import generate_cover_letter
 from app.services.gemini.gap_analyzer import analyze_gap
 from app.services.gemini.jd_analyzer import analyze_jd
+from app.services.job_search import save_job_description
 from app.services.mongodb.mcp_client import utcnow
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
@@ -83,18 +84,7 @@ async def analyze_job(
             status_code=status.HTTP_502_BAD_GATEWAY,
         )
 
-    now = utcnow()
-    jd_id = await mcp.insert_one(
-        "job_descriptions",
-        {
-            "user_id": user["id"],
-            "raw_text": body.jd_text,
-            "analysis": analysis,
-            "requirements": body.jd_text[:50_000],
-            "created_at": now,
-            "updated_at": now,
-        },
-    )
+    jd_id = await save_job_description(mcp, user["id"], body.jd_text, analysis)
 
     return json_response(
         success=True,
@@ -156,18 +146,7 @@ async def gap_analysis(
             status_code=status.HTTP_502_BAD_GATEWAY,
         )
 
-    now = utcnow()
-    jd_id = await mcp.insert_one(
-        "job_descriptions",
-        {
-            "user_id": user["id"],
-            "raw_text": body.jd_text,
-            "analysis": jd_analysis,
-            "requirements": body.jd_text[:50_000],
-            "created_at": now,
-            "updated_at": now,
-        },
-    )
+    jd_id = await save_job_description(mcp, user["id"], body.jd_text, jd_analysis)
 
     return json_response(
         success=True,

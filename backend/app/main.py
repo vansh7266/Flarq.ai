@@ -28,7 +28,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     structlog.get_logger("flarq.startup").info(
         "vertex_ai_ready",
         project=settings.google_cloud_project,
-        location=settings.google_cloud_location,
+        location=settings.vertex_ai_location,
     )
     database = await mongo_manager.connect()
     await ensure_indexes(database)
